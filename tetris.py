@@ -147,7 +147,7 @@ class tetrimino:
     # initiate mino's mutable information
     def init_mino(self):
         self.current_rot = 0
-        self.current_pos = self.spawn_pos
+        self.current_pos = [self.spawn_pos[0], self.spawn_pos[1]]
     # Based on its current [x, y] and current_rot, calculate the space where mino's blocks occupie 
     def current_space(self) -> list_2d:
         occupied_space = []
@@ -248,21 +248,37 @@ class controller:
         else:
             self.land()
             return 1
+    def hard_drop(self):
+        """
+        l = self.soft_drop()
+        while l != 1:
+            l = self.soft_drop()
+        """
+        x_position = self.dropping_mino.current_pos[0]
+        y_position = self.dropping_mino.current_pos[1] + 1
+        while self.check_collision(self.dropping_mino.current_rot, [x_position, y_position]) == False:
+            y_position += 1
+        self.dropping_mino.current_pos[1] = y_position - 1
+        self.land()
+
     # update field
     def land(self):
         space = self.dropping_mino.current_space()
         mino_color = self.dropping_mino.mino_id
         for xy in space:
             self.field[xy[1]][xy[0]] = mino_color
+
     # update View based on Model (MVC)
     def update_view(self):
         update_screen(self.screen, self.field, self.dropping_mino, self.next_minos, self.score, self.hold_mino_id)
+
     # 7 out of 10 minos in next_minos should be different types
     def next_minos_init(self):
         self.next_minos = random.sample([1,2,3,4,5,6,7,8,9,10], 10)
         for i in range(len(self.next_minos)):
             if self.next_minos[i] > 7:
                 self.next_minos[i] = random.randint(1,7)
+                
     # maintain the rule of 7 out of 10
     def next_minos_update(self):
         popped_mino = self.next_minos.pop(0)
@@ -407,7 +423,9 @@ def main():
         if key[pg.K_z] == 1: # down
             tmr += 3 
         if key[pg.K_w] == 1: # hard drop
-            pass
+            tmr = 0
+            ctl.hard_drop()
+            ctl.next_round()
         if key[pg.K_RIGHT] == 1: # rotate clockwise
             ctl.rotate(1)
         if key[pg.K_LEFT] == 1: # rotate counterclockwise
@@ -415,7 +433,7 @@ def main():
 
         ctl.update_view()
         pg.display.update()
-        clock.tick(15)
+        clock.tick(10)
 
 if __name__ == '__main__':
     main()
