@@ -3,6 +3,12 @@ import pygame as pg
 import sys
 import random
 
+"""
+tetris implemented using pygame
+employed MVC model, where Controller stands as a class, which contains Model, and View is provided as a bunch of functions
+
+"""
+
 list_2d = List[List[int]]
 list_3d = List[List[List[int]]]
 
@@ -61,6 +67,8 @@ s_index = 5
 t_index = 6
 z_index = 7
 
+# each mino's layout, 4(rotation) x 4 x 2(blocks occupying [x, y], 
+# where x and y value are offset values from upper left corner position)
 I_layout = [[[1,2], [2,2], [3,2], [4,2]],
             [[2,1], [2,2], [2,3], [2,4]],
             [[0,2], [1,2], [2,2], [3,2]],
@@ -91,6 +99,7 @@ Z_layout = [[[1,0], [0,0], [1,1], [2,1]],
             [[1,0], [0,1], [1,1], [0,2]]]
 
 
+# each mino's SRS information. For details, check https://tetris.wiki/Super_Rotation_System
 i_srs = [[[0,0],[-1,0],[2,0],[-1,0],[2,0]],
          [[-1,0],[0,0],[0,0],[0,1],[0,-2]],
          [[-1,1],[1,1],[-2,1],[1,0],[-2,0]],
@@ -180,47 +189,40 @@ class controller:
     def init(self, next_minos):
         self.next_minos = next_minos
     
-
     def next_round(self):
-        """
-        for i in range(len(controller.minos)):
-            controller.minos[i+1].current_pos[0] = controller.minos[i+1].spawn_pos[0]
-            controller.minos[i+1].current_pos[1] = controller.minos[i+1].spawn_pos[1]
-            controller.minos[i+1].current_rot = 0
-        """
         self.dropping_mino.init_mino()
         self.dropping_mino = controller.minos[self.next_minos[0]]
         self.next_minos.pop(0)
         self.next_minos.append(random.randint(1, 7))
     
-    def move_x(self, x): # right(x>0) / left(x<0)
+    # move dropping mino an offset specified by x, right(x>0) or left(x<0)
+    def move_x(self, x): 
         x_position = self.dropping_mino.current_pos[0] + x
         y_position = self.dropping_mino.current_pos[1]
         if self.check_collision(self.dropping_mino.current_rot, [x_position, y_position]) == False: # won't collide
             self.dropping_mino.current_pos[0] += x
 
-    
-    #どこにSRSのロジックを書くか？
-    #dropping_minoの最終位置、最終rotationを更新する
-    # angleはオフセット（絶対値じゃない）
-    def rotate(self, angle):
-        # angleを使って、最終的な[x, y]のリストを５つ取得
-        srs_offset = self.dropping_mino.srs_xy(angle)
-        
+    # rotate dropping mino after calculating its final position 
+    # calculation is done using Super Rotation System used in tetris world rule
+    def rotate(self, angle_offset):
+        srs_offset = self.dropping_mino.srs_xy(angle_offset)
         for xy_offset in srs_offset: # xy_offset is [x, y]
             x_position = self.dropping_mino.current_pos[0] + xy_offset[0]
-            y_position = self.dropping_mino.current_pos[1] - xy_offset[1] # note here (minus)
-            rot = (self.dropping_mino.current_rot + angle) % 4
+            y_position = self.dropping_mino.current_pos[1] - xy_offset[1] # minus because y axis is downward
+            rot = (self.dropping_mino.current_rot + angle_offset) % 4
             if self.check_collision(rot, [x_position, y_position]) == False:
                 self.dropping_mino.current_rot = rot
                 self.dropping_mino.current_pos = [x_position, y_position]
                 break
 
     # check if the dropping mino would collide to either of wall, floor, or stacks, when it is located xy with angle of rot
-    # xy は絶対位置
-    # rot は絶対回転
-    def check_collision(self, rot, xy):
+    # xy is absolute position, and each x and y value can have negative values when the dropping mino is near the left wall 
+    # rot is absolute angle:
+    #        {0: initial state, 1: 90 degree clockwise, 2: 180 clockwise(counterclockwise), 3: 90 degree counterclockwise}
+    def check_collision(self, rot, xy) -> bool:
         # get a list of [x, y], representing the location where blocks occupy
+        # Note here we could not use dropping_mino.current_space(), 
+        # because it calculates the space occupied based on current location and rotation angle.
         occupied_space = []
         mino_data = self.dropping_mino.block_data[rot] # 4 x 2 list
         for each_block in mino_data:
@@ -247,18 +249,18 @@ class controller:
         else:
             self.land()
             return 1
-    # update field and init dropping_mino
+    # update field
     def land(self):
         space = self.dropping_mino.current_space()
         mino_color = self.dropping_mino.mino_id
-        print(space)
         for xy in space:
             self.field[xy[1]][xy[0]] = mino_color
-
+    # update View based on Model (MVC)
     def update_view(self):
         update_screen(self.screen, self.field, self.dropping_mino, self.next_minos, self.score, self.hold_mino_id)
 
 
+# View functions here
 def draw_hold(screen):
     # show string "HOLD"
     font = pg.font.Font(None, block_size)
@@ -350,46 +352,28 @@ def update_screen(screen, field, dropping_mino, next_minos, score, hold_mino_id)
     update_nexts(screen, next_minos)
     update_drop(screen, dropping_mino)
 
-
-
-
-
-# return true if dropping tetrimino overlaps either walls, floors, or stacks
-def is_overlappd(screen, tetrimino):
-    pass
-            
-
-# 90 degree clockwise(angle = 1), or 90 degree counterclockwise(angle = -1). 
-def find_final_position(tetrimino, angle):
-    pass
-
         
 def main():
-    #global field, dropping_mino, next_minos, score, hold_mino_id
     pg.init()
     pg.display.set_caption("tetris")
     screen = pg.display.set_mode((screen_width, screen_length))
+    # show basic screen
+    screen_init(screen)
 
     #initiate next_minos
     next_minos = []
     for i in range(5):
         next_minos.append(random.randint(1, 7))
-    # initiate dropping mino
 
+    # initiate controller
     ctl = controller(screen)
     ctl.init(next_minos)
-
-
-    # show basic screen
-    screen_init(screen)
 
     clock = pg.time.Clock()
 
     tmr = 0
-    # spawn a new tetrimino
 
     while True:
-        # Control(modify data)
         tmr = tmr + 1
         if tmr > 10:
             tmr = 0
@@ -417,18 +401,8 @@ def main():
         if key[pg.K_LEFT] == 1: # rotate counterclockwise
             ctl.rotate(-1)
 
-        # experiment
-        """
-        temp = tmr % 7
-        ctl.hold_mino_id = (tmr % 7) + 1
-        """
-        # View
-
-        # pg.draw.rect(screen, COLOR_BG, [field_x, field_y, field_width, field_length])
         ctl.update_view()
-
         pg.display.update()
-        # time period should be fast enough to allow user to manipulate the dropping block fast
         clock.tick(15)
 
 if __name__ == '__main__':
