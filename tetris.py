@@ -186,14 +186,13 @@ class controller:
         self.score = 0
         self.hold_mino_id = None # 1 ~ 7
         
-    def init(self, next_minos):
-        self.next_minos = next_minos
+    def init(self):
+        self.next_minos_init()
     
     def next_round(self):
         self.dropping_mino.init_mino()
         self.dropping_mino = controller.minos[self.next_minos[0]]
-        self.next_minos.pop(0)
-        self.next_minos.append(random.randint(1, 7))
+        self.next_minos_update()
     
     # move dropping mino an offset specified by x, right(x>0) or left(x<0)
     def move_x(self, x): 
@@ -258,6 +257,23 @@ class controller:
     # update View based on Model (MVC)
     def update_view(self):
         update_screen(self.screen, self.field, self.dropping_mino, self.next_minos, self.score, self.hold_mino_id)
+    # 7 out of 10 minos in next_minos should be different types
+    def next_minos_init(self):
+        self.next_minos = random.sample([1,2,3,4,5,6,7,8,9,10], 10)
+        for i in range(len(self.next_minos)):
+            if self.next_minos[i] > 7:
+                self.next_minos[i] = random.randint(1,7)
+    # maintain the rule of 7 out of 10
+    def next_minos_update(self):
+        popped_mino = self.next_minos.pop(0)
+        flag = 0
+        for i in range(len(self.next_minos)):
+            if self.next_minos[i] == popped_mino:
+                self.next_minos.append(random.randint(1,7))
+                flag = 1
+        if flag == 0:
+            self.next_minos.append(popped_mino)
+
 
 
 # View functions here
@@ -360,14 +376,10 @@ def main():
     # show basic screen
     screen_init(screen)
 
-    #initiate next_minos
-    next_minos = []
-    for i in range(5):
-        next_minos.append(random.randint(1, 7))
 
     # initiate controller
     ctl = controller(screen)
-    ctl.init(next_minos)
+    ctl.init()
 
     clock = pg.time.Clock()
 
