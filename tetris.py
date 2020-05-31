@@ -1,6 +1,10 @@
+from typing import List
 import pygame as pg
 import sys
 import random
+
+list_2d = List[List[int]]
+list_3d = List[List[List[int]]]
 
 block_size = 60
 screen_width = block_size * 30
@@ -111,18 +115,17 @@ class tetrimino:
     # srs_data is 4 x 5 x 2 list needed to implement super rotation system (for detail, go to https://tetris.wiki/Super_Rotation_System)
     # current_rot {0: initial state, 1: 90 degree clockwise, 2: 180 clockwise(counterclockwise), 3: 90 degree counterclockwise}
     # spawn_pos is [x, y] position where the block initially appears
-    def __init__(self, mino_id, block_data, srs_data, spawn_pos):
+    def __init__(self, mino_id: int, block_data: list_3d, srs_data: list_3d, spawn_pos: list_2d):
         self.mino_id = mino_id
         self.block_data = block_data
         self.srs_data = srs_data
         self.spawn_pos = spawn_pos
-        self.current_rot = 0 # mutable, 0, 1, 2, 3
+        self.current_rot = 0 
         self.current_pos = [spawn_pos[0], spawn_pos[1]]
-        #self.current_pos.append(spawn_pos[0])
-        #self.current_pos.append(spawn_pos[1])
-    # Based on its current [x, y], current_rot, calculate the final position if it would 
-    # return list of [x, y], note for o mino
-    def srs_xy(self, angle_offset): # angle_offset = 1 or -1
+    # Based on its current [x, y], current_rot, calculate the final position if it would be rotated, where angle is specified angle_offset
+    # angle_offset = 1 or -1
+    # return a list of [x, y]
+    def srs_xy(self, angle_offset) -> list_2d: 
         final_angle = (self.current_rot + angle_offset) % 4
         current_srs = self.srs_data[self.current_rot]
         final_srs = self.srs_data[final_angle]
@@ -132,12 +135,12 @@ class tetrimino:
             y = current_srs[i][1] - final_srs[i][1]
             result.append([x,y])
         return result
+    # initiate mino's mutable information
     def init_mino(self):
         self.current_rot = 0
         self.current_pos = self.spawn_pos
-    
-    def current_space(self):
-        # get a list of [x, y], representing the location where blocks occupy
+    # Based on its current [x, y] and current_rot, calculate the space where mino's blocks occupie 
+    def current_space(self) -> list_2d:
         occupied_space = []
         mino_data = self.block_data[self.current_rot] # 4 x 2 list
         for each_block in mino_data:
@@ -148,13 +151,13 @@ class tetrimino:
         
 
 class controller:
-    I_mino = tetrimino(1, I_layout, i_srs, [3, 0])
-    J_mino = tetrimino(2, J_layout, jlstz_srs, [4, 1])
-    L_mino = tetrimino(3, L_layout, jlstz_srs, [4, 1])
-    O_mino = tetrimino(4, O_layout, o_srs, [4, 1])
-    S_mino = tetrimino(5, S_layout, jlstz_srs, [4, 1])
-    T_mino = tetrimino(6, T_layout, jlstz_srs, [4, 1])
-    Z_mino = tetrimino(7, Z_layout, jlstz_srs, [4, 1])
+    I_mino = tetrimino(1, I_layout, i_srs, i_spawn)
+    J_mino = tetrimino(2, J_layout, jlstz_srs, jlostz_spawn)
+    L_mino = tetrimino(3, L_layout, jlstz_srs, jlostz_spawn)
+    O_mino = tetrimino(4, O_layout, o_srs, jlostz_spawn)
+    S_mino = tetrimino(5, S_layout, jlstz_srs, jlostz_spawn)
+    T_mino = tetrimino(6, T_layout, jlstz_srs, jlostz_spawn)
+    Z_mino = tetrimino(7, Z_layout, jlstz_srs, jlostz_spawn)
 
     minos = {
         1: I_mino,
@@ -177,11 +180,15 @@ class controller:
     def init(self, next_minos):
         self.next_minos = next_minos
     
+
     def next_round(self):
+        """
         for i in range(len(controller.minos)):
             controller.minos[i+1].current_pos[0] = controller.minos[i+1].spawn_pos[0]
             controller.minos[i+1].current_pos[1] = controller.minos[i+1].spawn_pos[1]
             controller.minos[i+1].current_rot = 0
+        """
+        self.dropping_mino.init_mino()
         self.dropping_mino = controller.minos[self.next_minos[0]]
         self.next_minos.pop(0)
         self.next_minos.append(random.randint(1, 7))
