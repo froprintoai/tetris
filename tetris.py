@@ -2,6 +2,7 @@ from typing import List
 import pygame as pg
 import sys
 import random
+import time
 
 """
 tetris implemented using pygame
@@ -249,11 +250,6 @@ class controller:
             self.land()
             return 1
     def hard_drop(self):
-        """
-        l = self.soft_drop()
-        while l != 1:
-            l = self.soft_drop()
-        """
         x_position = self.dropping_mino.current_pos[0]
         y_position = self.dropping_mino.current_pos[1] + 1
         while self.check_collision(self.dropping_mino.current_rot, [x_position, y_position]) == False:
@@ -400,14 +396,21 @@ def main():
     clock = pg.time.Clock()
 
     tmr = 0
+    hard_drop_sensitive = 0
 
     while True:
         tmr = tmr + 1
         if tmr > 10:
+            hard_drop_sensitive = 0
             tmr = 0
             land = ctl.soft_drop()
             if land == 1:
                 ctl.next_round()
+
+                ctl.update_view()
+                pg.display.update()
+                clock.tick(10)
+
                 continue
         # check user input
         # if the block is rotated when it touches the stack or floor, tmr need to be decreased so it allows block to float for a while
@@ -423,16 +426,23 @@ def main():
         if key[pg.K_z] == 1: # down
             tmr += 3 
         if key[pg.K_w] == 1: # hard drop
-            tmr = 0
-            ctl.hard_drop()
-            ctl.next_round()
+            if hard_drop_sensitive == 0:
+                ctl.hard_drop()
+                ctl.next_round()
+                tmr = 0
+                hard_drop_sensitive = 1
+            else:
+                hard_drop_sensitive = 0
         if key[pg.K_RIGHT] == 1: # rotate clockwise
             ctl.rotate(1)
         if key[pg.K_LEFT] == 1: # rotate counterclockwise
             ctl.rotate(-1)
 
+
+        # update view
         ctl.update_view()
         pg.display.update()
+
         clock.tick(10)
 
 if __name__ == '__main__':
