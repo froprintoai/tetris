@@ -3,12 +3,16 @@ import pygame as pg
 import sys
 import random
 import time
+import numpy as np
 
 """
 tetris implemented using pygame
 employed MVC model, where Controller stands as a class, which contains Model, and View is provided as a bunch of functions
 
 """
+
+num_rows = 23
+num_columns = 10
 
 list_2d = List[List[int]]
 list_3d = List[List[List[int]]]
@@ -263,6 +267,24 @@ class controller:
         mino_color = self.dropping_mino.mino_id
         for xy in space:
             self.field[xy[1]][xy[0]] = mino_color
+        #line deletion 
+        y_list = []
+        for xy in space:
+            y_list.append(xy[1])
+        y_list = list(dict.fromkeys(y_list)) #remove duplication
+        y_list = [y for y in y_list if np.prod(self.field[y]) != 0]
+
+        if len(y_list) > 0: # if deletion required
+            temp_field = []
+            for i in range(len(self.field)): # 0 ~ 22
+                if i not in y_list:
+                    temp_field.append(self.field[i])
+            zeros_inserted = len(self.field) - len(temp_field) # number of zero rows inserted
+            for i in range(zeros_inserted):
+                temp_field.insert(0, [0 for i in range(num_columns)])
+            self.field = temp_field
+
+        
 
     # update View based on Model (MVC)
     def update_view(self):
