@@ -274,15 +274,25 @@ class controller:
         y_list = list(dict.fromkeys(y_list)) #remove duplication
         y_list = [y for y in y_list if np.prod(self.field[y]) != 0]
 
+
         if len(y_list) > 0: # if deletion required
-            temp_field = []
-            for i in range(len(self.field)): # 0 ~ 22
-                if i not in y_list:
-                    temp_field.append(self.field[i])
-            zeros_inserted = len(self.field) - len(temp_field) # number of zero rows inserted
-            for i in range(zeros_inserted):
-                temp_field.insert(0, [0 for i in range(num_columns)])
-            self.field = temp_field
+            # deletion animation
+            draw_deleted_lines(self.screen, y_list)
+            pg.display.update()
+            time.sleep(0.5)
+
+            self.delete_lines(y_list)
+
+    # deleting field lines specified by y_list
+    def delete_lines(self, y_list):
+        temp_field = []
+        for i in range(len(self.field)): # 0 ~ 22
+            if i not in y_list:
+                temp_field.append(self.field[i])
+        zeros_inserted = len(self.field) - len(temp_field) # number of zero rows inserted
+        for i in range(zeros_inserted):
+            temp_field.insert(0, [0 for i in range(num_columns)])
+        self.field = temp_field
 
         
 
@@ -402,6 +412,14 @@ def update_screen(screen, field, dropping_mino, next_minos, score, hold_mino_id)
     update_nexts(screen, next_minos)
     update_drop(screen, dropping_mino)
 
+def draw_deleted_lines(screen, y_list):
+    for y in y_list:
+        draw_deleted_line(screen, y)
+
+def draw_deleted_line(screen, y):
+    d_y = field_y + (y - 3) * block_size
+    pg.draw.rect(screen, COLOR_BG, [field_x, d_y, field_width, block_size])
+
         
 def main():
     pg.init()
@@ -422,18 +440,7 @@ def main():
 
     while True:
         tmr = tmr + 1
-        if tmr > 10:
-            hard_drop_sensitive = 0
-            tmr = 0
-            land = ctl.soft_drop()
-            if land == 1:
-                ctl.next_round()
 
-                ctl.update_view()
-                pg.display.update()
-                clock.tick(10)
-
-                continue
         # check user input
         # if the block is rotated when it touches the stack or floor, tmr need to be decreased so it allows block to float for a while
         for event in pg.event.get():
@@ -446,7 +453,7 @@ def main():
         if key[pg.K_s] == 1: # right
             ctl.move_x(1)
         if key[pg.K_z] == 1: # down
-            tmr += 3 
+            tmr += 7 
         if key[pg.K_w] == 1: # hard drop
             if hard_drop_sensitive == 0:
                 ctl.hard_drop()
@@ -459,6 +466,19 @@ def main():
             ctl.rotate(1)
         if key[pg.K_LEFT] == 1: # rotate counterclockwise
             ctl.rotate(-1)
+
+        if tmr > 10:
+            hard_drop_sensitive = 0
+            tmr = 0
+            land = ctl.soft_drop()
+            if land == 1:
+                ctl.next_round()
+
+                ctl.update_view()
+                pg.display.update()
+                clock.tick(10)
+
+                continue
 
 
         # update view
