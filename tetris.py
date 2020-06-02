@@ -315,9 +315,20 @@ class controller:
             if self.next_minos[i] == popped_mino:
                 self.next_minos.append(random.randint(1,7))
                 flag = 1
+                break
         if flag == 0:
             self.next_minos.append(popped_mino)
-
+    
+    # exchange or hold
+    def hold(self):
+        if self.hold_mino_id == None:
+            self.hold_mino_id = self.dropping_mino.mino_id
+            self.next_round()
+        else:
+            self.dropping_mino.init_mino()
+            temp_next_mino_id = self.hold_mino_id
+            self.hold_mino_id = self.dropping_mino.mino_id
+            self.dropping_mino = controller.minos[temp_next_mino_id]
 
 
 # View functions here
@@ -437,6 +448,7 @@ def main():
 
     tmr = 0
     hard_drop_sensitive = 0
+    hold_used = False
 
     while True:
         tmr = tmr + 1
@@ -458,6 +470,7 @@ def main():
             if hard_drop_sensitive == 0:
                 ctl.hard_drop()
                 ctl.next_round()
+                hold_used = False
                 tmr = 0
                 hard_drop_sensitive = 1
             else:
@@ -466,13 +479,19 @@ def main():
             ctl.rotate(1)
         if key[pg.K_LEFT] == 1: # rotate counterclockwise
             ctl.rotate(-1)
+        if key[pg.K_SPACE] == 1: #hold
+            if hold_used == False:
+                ctl.hold()
+                hold_used = True
 
+        # control soft drop
         if tmr > 10:
             hard_drop_sensitive = 0
             tmr = 0
             land = ctl.soft_drop()
             if land == 1:
                 ctl.next_round()
+                hold_used = False
 
                 ctl.update_view()
                 pg.display.update()
