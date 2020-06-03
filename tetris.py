@@ -190,6 +190,8 @@ class controller:
         self.next_minos = [] # 1 ~ 7
         self.score = 0
         self.hold_mino_id = None # 1 ~ 7
+        self.score_text = ""
+        self.last_move_is_rotate = False
         
     def init(self):
         self.next_minos_init()
@@ -198,6 +200,7 @@ class controller:
         self.dropping_mino.init_mino()
         self.dropping_mino = controller.minos[self.next_minos[0]]
         self.next_minos_update()
+        self.last_move_is_rotate = False
     
     # move dropping mino an offset specified by x, right(x>0) or left(x<0)
     def move_x(self, x): 
@@ -205,6 +208,7 @@ class controller:
         y_position = self.dropping_mino.current_pos[1]
         if self.check_collision(self.dropping_mino.current_rot, [x_position, y_position]) == False: # won't collide
             self.dropping_mino.current_pos[0] += x
+            self.last_move_is_rotate = False
 
     # rotate dropping mino after calculating its final position 
     # calculation is done using Super Rotation System used in tetris world rule
@@ -217,6 +221,7 @@ class controller:
             if self.check_collision(rot, [x_position, y_position]) == False:
                 self.dropping_mino.current_rot = rot
                 self.dropping_mino.current_pos = [x_position, y_position]
+                self.last_move_is_rotate = True
                 break
 
     # check if the dropping mino would collide to either of wall, floor, or stacks, when it is located xy with angle of rot
@@ -249,6 +254,7 @@ class controller:
         y_position = self.dropping_mino.current_pos[1] + 1
         if self.check_collision(self.dropping_mino.current_rot, [x_position, y_position]) == False: # won't collide
             self.dropping_mino.current_pos[1] += 1
+            self.last_move_is_rotate = False
             return 0
         else:
             self.land()
@@ -275,13 +281,53 @@ class controller:
         y_list = [y for y in y_list if np.prod(self.field[y]) != 0]
 
 
-        if len(y_list) > 0: # if deletion required
+        lines_deleted = len(y_list)
+        if lines_deleted > 0: # if deletion required
             # deletion animation
             draw_deleted_lines(self.screen, y_list)
             pg.display.update()
             time.sleep(0.5)
 
+            #scoring
+            t_spin_check = self.t_spin_checker()
+            if t_spin_check == 0:
+                self.score_not_t_spin(lines_deleted)
+            elif t_spin_check == 1:
+                self.score_t_spin_mini(lines_deleted)
+            elif t_spin_check == 2:
+                self.score_t_spin(lines_deleted)
+
             self.delete_lines(y_list)
+
+                
+    # 0 --> no t spin 1--> t spin mini 2 --> t spin
+    def t_spin_checker(self) -> int:
+        if self.dropping_mino.mino_id != t_index:
+            return 0
+        elif self.last_move_is_rotate != True:
+            return 0
+        else:
+            diago_squares = []
+            x = self.dropping_mino.current_pos[0]
+            y = self.dropping_mino.current_pos[1]
+            for i in [0, 2]:
+                for j in [0, 2]:
+                    diago_squares.append([x + i, y + j])
+            filled_counter = 0
+            wall_floor_counter = 0
+            for xy in diago_squares:
+                # wall and floor check
+                if xy[0] < 0 or xy[0] > 9 or xy[1] > 22:
+                    wall_floor_counter += 1
+                # stack check
+                elif self.field[xy[1]][xy[0]] > 0:
+                    filled_counter += 1
+            if filled_counter > 2:
+                return 2
+            elif wall_floor_counter + filled_counter > 2:
+                return 1
+            else:
+                return 0
 
     # deleting field lines specified by y_list
     def delete_lines(self, y_list):
@@ -293,12 +339,40 @@ class controller:
         for i in range(zeros_inserted):
             temp_field.insert(0, [0 for i in range(num_columns)])
         self.field = temp_field
+    
+    def score_not_t_spin(self, num_lines):
+        if num_lines < 4:
+            gain = num_lines * 200 - 100
+            self.score += gain
+            self.score_text = "+" + str(gain)
+        else:
+            gain = 800
+            self.score += gain
+            self.score_text = "Tetris! +800"
+
+    def score_t_spin(self, num_lines):
+        if num_lines == 1:
+            self.score += 800
+            self.score_text = "T-Spin Single"
+        if num_lines == 2:
+            self.score += 1200
+            self.score_text = "T-Spin Double"
+        if num_lines == 3:
+            self.score += 1600
+            self.score_text = "T-Spin Triple"
 
         
+    def score_t_spin_mini(self, num_lines):
+        if num_lines == 1:
+            self.score += 200
+            self.score_text = "T-Spin mini single"
+        elif num_lines == 2:
+            self.score += 400
+            self.score_text = "T-Spin mini double"
 
     # update View based on Model (MVC)
     def update_view(self):
-        update_screen(self.screen, self.field, self.dropping_mino, self.next_minos, self.score, self.hold_mino_id)
+        update_screen(self.screen, self.field, self.dropping_mino, self.next_minos, self.score, self.score_text, self.hold_mino_id)
 
     # 7 out of 10 minos in next_minos should be different types
     def next_minos_init(self):
@@ -376,10 +450,19 @@ def update_hold(screen, hold_mino_id):
         draw_mino(screen, hold_mino_id, hold_x, hold_y, hold_block_size, 0)
 
 
-def update_score(screen, score):
+def update_score(screen, score, score_text):
+    # reset
+    pg.draw.rect(screen, COLOR_BG, [score_x, score_y, score_width, score_length])
+    pg.draw.rect(screen, BLACK, [score_x, score_y + block_size, score_width, score_length])
+
+    # draw new value
     font = pg.font.Font(None, block_size)
     txt = font.render(str(score), True, WHITE)
     screen.blit(txt, [score_x, score_y])
+    # show string "SCORE"
+    font = pg.font.Font(None, block_size)
+    txt = font.render(score_text, True, WHITE)
+    screen.blit(txt, [score_x, score_y + block_size])
 
 def update_field(screen, field):
     draw_field(screen)
@@ -416,9 +499,9 @@ def update_drop(screen, dropping_mino):
         pg.draw.rect(screen, BLACK, [field_x, 0, field_width, block_size])
         
 
-def update_screen(screen, field, dropping_mino, next_minos, score, hold_mino_id):
+def update_screen(screen, field, dropping_mino, next_minos, score, score_text, hold_mino_id):
     update_hold(screen, hold_mino_id)
-    update_score(screen, score)
+    update_score(screen, score, score_text)
     update_field(screen, field)
     update_nexts(screen, next_minos)
     update_drop(screen, dropping_mino)
