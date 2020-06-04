@@ -192,6 +192,7 @@ class controller:
         self.hold_mino_id = None # 1 ~ 7
         self.score_text = ""
         self.last_move_is_rotate = False
+        self.highlight = []
         
     def init(self):
         self.next_minos_init()
@@ -201,6 +202,7 @@ class controller:
         self.dropping_mino = controller.minos[self.next_minos[0]]
         self.next_minos_update()
         self.last_move_is_rotate = False
+        self.update_highlight()
         return self.is_gameover()
     
     def is_gameover(self) -> bool:
@@ -217,6 +219,7 @@ class controller:
         if self.check_collision(self.dropping_mino.current_rot, [x_position, y_position]) == False: # won't collide
             self.dropping_mino.current_pos[0] += x
             self.last_move_is_rotate = False
+        self.update_highlight()
 
     # rotate dropping mino after calculating its final position 
     # calculation is done using Super Rotation System used in tetris world rule
@@ -231,6 +234,7 @@ class controller:
                 self.dropping_mino.current_pos = [x_position, y_position]
                 self.last_move_is_rotate = True
                 break
+        self.update_highlight()
 
     # check if the dropping mino would collide to either of wall, floor, or stacks, when it is located xy with angle of rot
     # xy is absolute position, and each x and y value can have negative values when the dropping mino is near the left wall 
@@ -380,7 +384,7 @@ class controller:
 
     # update View based on Model (MVC)
     def update_view(self):
-        update_screen(self.screen, self.field, self.dropping_mino, self.next_minos, self.score, self.score_text, self.hold_mino_id)
+        update_screen(self.screen, self.field, self.dropping_mino, self.next_minos, self.score, self.score_text, self.hold_mino_id, self.highlight)
 
     # 7 out of 10 minos in next_minos should be different types
     def next_minos_init(self):
@@ -411,6 +415,19 @@ class controller:
             temp_next_mino_id = self.hold_mino_id
             self.hold_mino_id = self.dropping_mino.mino_id
             self.dropping_mino = controller.minos[temp_next_mino_id]
+    
+    def update_highlight(self):
+        self.highlight = []
+        x_position = self.dropping_mino.current_pos[0]
+        y_position = self.dropping_mino.current_pos[1] + 1
+        while self.check_collision(self.dropping_mino.current_rot, [x_position, y_position]) == False:
+            y_position += 1
+        y_position -= 1
+        current_rot = self.dropping_mino.current_rot
+        block_offset = self.dropping_mino.block_data[current_rot]
+        for xy in block_offset:
+            self.highlight.append([xy[0] + x_position, xy[1] + y_position])
+
 
 
 # View functions here
@@ -433,6 +450,7 @@ def draw_score(screen):
 # show field based on its contents
 # draw dropping tetriminos as well
 def draw_field(screen):
+    pg.draw.rect(screen, BLACK, [field_x, field_y, field_width, field_length], 5)
     pg.draw.rect(screen, COLOR_BG, [field_x, field_y, field_width, field_length])
 
 def draw_nexts(screen):
@@ -507,12 +525,13 @@ def update_drop(screen, dropping_mino):
         pg.draw.rect(screen, BLACK, [field_x, 0, field_width, block_size])
         
 
-def update_screen(screen, field, dropping_mino, next_minos, score, score_text, hold_mino_id):
+def update_screen(screen, field, dropping_mino, next_minos, score, score_text, hold_mino_id, highlight):
     update_hold(screen, hold_mino_id)
     update_score(screen, score, score_text)
     update_field(screen, field)
     update_nexts(screen, next_minos)
     update_drop(screen, dropping_mino)
+    draw_highlight(screen, highlight)
 
 def draw_deleted_lines(screen, y_list):
     for y in y_list:
@@ -522,6 +541,12 @@ def draw_deleted_line(screen, y):
     d_y = field_y + (y - 3) * block_size
     pg.draw.rect(screen, COLOR_BG, [field_x, d_y, field_width, block_size])
 
+
+def draw_highlight(screen, highlight):
+    for xy in highlight:
+        d_x = field_x + xy[0] * block_size
+        d_y = xy[1] * block_size + field_y - (23-20) * block_size
+        pg.draw.rect(screen, WHITE, [d_x, d_y, block_size, block_size], 5)
         
 def main():
     pg.init()
