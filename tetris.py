@@ -196,11 +196,19 @@ class controller:
     def init(self):
         self.next_minos_init()
     
-    def next_round(self):
+    def next_round(self) -> bool:
         self.dropping_mino.init_mino()
         self.dropping_mino = controller.minos[self.next_minos[0]]
         self.next_minos_update()
         self.last_move_is_rotate = False
+        return self.is_gameover()
+    
+    def is_gameover(self) -> bool:
+        space = self.dropping_mino.current_space()
+        for xy in space:
+            if self.field[xy[1]][xy[0]] > 0:
+                return True
+        return False
     
     # move dropping mino an offset specified by x, right(x>0) or left(x<0)
     def move_x(self, x): 
@@ -532,8 +540,9 @@ def main():
     tmr = 0
     hard_drop_sensitive = 0
     hold_used = False
+    gameover = False
 
-    while True:
+    while gameover == False:
         tmr = tmr + 1
 
         # check user input
@@ -548,11 +557,11 @@ def main():
         if key[pg.K_s] == 1: # right
             ctl.move_x(1)
         if key[pg.K_z] == 1: # down
-            tmr += 7 
+            tmr += 8 
         if key[pg.K_w] == 1: # hard drop
             if hard_drop_sensitive == 0:
                 ctl.hard_drop()
-                ctl.next_round()
+                gameover = ctl.next_round()
                 hold_used = False
                 tmr = 0
                 hard_drop_sensitive = 1
@@ -573,7 +582,7 @@ def main():
             tmr = 0
             land = ctl.soft_drop()
             if land == 1:
-                ctl.next_round()
+                gamevoer = ctl.next_round()
                 hold_used = False
 
                 ctl.update_view()
@@ -588,6 +597,7 @@ def main():
         pg.display.update()
 
         clock.tick(10)
+    print("gameover")
 
 if __name__ == '__main__':
     main()
