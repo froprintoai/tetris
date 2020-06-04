@@ -3,7 +3,7 @@ tetris implemented using pygame
 
 
 # DEMO
-
+![Image of Demo Play](https://github.com/froprintoai/tetris/blob/master/demo.png?raw=true)
  
 # Features
 This version of tetris basically follows the rule from Tetris DS.
