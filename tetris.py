@@ -18,7 +18,7 @@ list_2d = List[List[int]]
 list_3d = List[List[List[int]]]
 
 block_size = 60
-screen_width = block_size * 30
+screen_width = block_size * 40 
 screen_length = block_size * 22
 
 field_width = block_size * 10
@@ -183,8 +183,8 @@ class controller:
         7: Z_mino
     }
 
-    def __init__(self, screen):
-        self.screen = screen
+    def __init__(self, v):
+        self.view = v
         self.field = [[0 for i in range(10)] for j in range(23)]
         self.dropping_mino = controller.minos[random.randint(1, 7)] 
         self.next_minos = [] # 1 ~ 7
@@ -296,7 +296,7 @@ class controller:
         lines_deleted = len(y_list)
         if lines_deleted > 0: # if deletion required
             # deletion animation
-            draw_deleted_lines(self.screen, y_list)
+            self.view.draw_deleted_lines(y_list)
             pg.display.update()
             time.sleep(0.5)
 
@@ -384,7 +384,7 @@ class controller:
 
     # update View based on Model (MVC)
     def update_view(self):
-        update_screen(self.screen, self.field, self.dropping_mino, self.next_minos, self.score, self.score_text, self.hold_mino_id, self.highlight)
+        self.view.update_screen(self.field, self.dropping_mino, self.next_minos, self.score, self.score_text, self.hold_mino_id, self.highlight)
 
     # 7 out of 10 minos in next_minos should be different types
     def next_minos_init(self):
@@ -430,135 +430,141 @@ class controller:
             self.highlight.append([xy[0] + x_position, xy[1] + y_position])
 
 
+class view():
+    def __init__(self, screen):
+        self.screen = screen
 
-# View functions here
-def draw_hold(screen):
-    # show string "HOLD"
-    font = pg.font.Font(None, block_size)
-    txt = font.render("HOLD", True, WHITE)
-    screen.blit(txt, [hold_text_x, hold_text_y])
-    # show the square blank for held mino
-    pg.draw.rect(screen, COLOR_BG, [hold_x, hold_y, hold_width, hold_length])
+    # View functions here
+    def draw_hold(self):
+        # show string "HOLD"
+        font = pg.font.Font(None, block_size)
+        txt = font.render("HOLD", True, WHITE)
+        self.screen.blit(txt, [hold_text_x, hold_text_y])
+        # show the square blank for held mino
+        pg.draw.rect(self.screen, COLOR_BG, [hold_x, hold_y, hold_width, hold_length])
 
-def draw_score(screen):
-    # show string "SCORE"
-    font = pg.font.Font(None, block_size)
-    txt = font.render("SCORE", True, WHITE)
-    screen.blit(txt, [score_text_x, score_text_y])
-    # show the square blank for held mino
-    pg.draw.rect(screen, COLOR_BG, [score_x, score_y, score_width, score_length])
+    def draw_score(self):
+        # show string "SCORE"
+        font = pg.font.Font(None, block_size)
+        txt = font.render("SCORE", True, WHITE)
+        self.screen.blit(txt, [score_text_x, score_text_y])
+        # show the square blank for held mino
+        pg.draw.rect(self.screen, COLOR_BG, [score_x, score_y, score_width, score_length])
 
-# show field based on its contents
-# draw dropping tetriminos as well
-def draw_field(screen):
-    pg.draw.rect(screen, BLACK, [field_x, field_y, field_width, field_length], 5)
-    pg.draw.rect(screen, COLOR_BG, [field_x, field_y, field_width, field_length])
+    # show field based on its contents
+    # draw dropping tetriminos as well
+    def draw_field(self):
+        pg.draw.rect(self.screen, BLACK, [field_x, field_y, field_width, field_length], 5)
+        pg.draw.rect(self.screen, COLOR_BG, [field_x, field_y, field_width, field_length])
 
-def draw_nexts(screen):
-    # show string "NEXT"
-    font = pg.font.Font(None, block_size)
-    txt = font.render("NEXT", True, WHITE)
-    screen.blit(txt, [nexts_text_x, nexts_text_y])
-    for i in range(5):
-        pg.draw.rect(screen, COLOR_BG, [nexts_x[i], nexts_y[i], nexts_width, nexts_length])
+    def draw_nexts(self):
+        # show string "NEXT"
+        font = pg.font.Font(None, block_size)
+        txt = font.render("NEXT", True, WHITE)
+        self.screen.blit(txt, [nexts_text_x, nexts_text_y])
+        for i in range(5):
+            pg.draw.rect(self.screen, COLOR_BG, [nexts_x[i], nexts_y[i], nexts_width, nexts_length])
 
-def screen_init(screen):
-    screen.fill(BLACK)
-    draw_hold(screen)
-    draw_score(screen)
-    draw_field(screen)
-    draw_nexts(screen)
+    def screen_init(self):
+        self.screen.fill(BLACK)
+        self.draw_hold()
+        self.draw_score()
+        self.draw_field()
+        self.draw_nexts()
 
-# Note that this doesn't update screen if there is nothing in hold
-def update_hold(screen, hold_mino_id):
-    if hold_mino_id != None:
-        # delete current drawing first
-        pg.draw.rect(screen, COLOR_BG, [hold_x, hold_y, hold_width, hold_length])
-        draw_mino(screen, hold_mino_id, hold_x, hold_y, hold_block_size, 0)
-
-
-def update_score(screen, score, score_text):
-    # reset
-    pg.draw.rect(screen, COLOR_BG, [score_x, score_y, score_width, score_length])
-    pg.draw.rect(screen, BLACK, [score_x, score_y + block_size, score_width, score_length])
-
-    # draw new value
-    font = pg.font.Font(None, block_size)
-    txt = font.render(str(score), True, WHITE)
-    screen.blit(txt, [score_x, score_y])
-    # show string "SCORE"
-    font = pg.font.Font(None, block_size)
-    txt = font.render(score_text, True, WHITE)
-    screen.blit(txt, [score_x, score_y + block_size])
-
-def update_field(screen, field):
-    draw_field(screen)
-    for y in range(20):
-        for x in range(10):
-            if field[y + 3][x] > 0: # if there is a block
-                color = COLORS[field[y + 3][x]]
-                start_x = block_size * x + field_x
-                start_y = block_size * y + field_y
-                pg.draw.rect(screen, color, [start_x, start_y, block_size, block_size])
-                # enclose it with bg color line
-                pg.draw.rect(screen, COLOR_BG, [start_x, start_y, block_size, block_size], 1)
-
-def draw_mino(screen, mino_id, draw_x, draw_y, b_size, rot):
-    mino_layout = controller.minos[mino_id].block_data[rot] # 4 x 2
-    for xy in mino_layout:
-        d_x = draw_x + xy[0] * b_size
-        d_y = draw_y + xy[1] * b_size
-        pg.draw.rect(screen, COLORS[mino_id], [d_x, d_y, b_size, b_size])
-        pg.draw.rect(screen, COLOR_BG, [d_x, d_y, b_size, b_size], 1)
-
-def update_nexts(screen, next_minos):
-    for i in range(5):
-        draw_x = nexts_x[i]
-        draw_y = nexts_y[i]
-        pg.draw.rect(screen, COLOR_BG, [draw_x, draw_y, nexts_width, nexts_length])
-        draw_mino(screen, next_minos[i], draw_x, draw_y, nexts_block_size, 0)
-
-def update_drop(screen, dropping_mino):
-    if dropping_mino != None:
-        d_x = dropping_mino.current_pos[0] * block_size + field_x
-        d_y = dropping_mino.current_pos[1] * block_size + field_y - (23-20) * block_size
-        draw_mino(screen, dropping_mino.mino_id, d_x, d_y, block_size, dropping_mino.current_rot)
-        pg.draw.rect(screen, BLACK, [field_x, 0, field_width, block_size])
-        
-
-def update_screen(screen, field, dropping_mino, next_minos, score, score_text, hold_mino_id, highlight):
-    update_hold(screen, hold_mino_id)
-    update_score(screen, score, score_text)
-    update_field(screen, field)
-    update_nexts(screen, next_minos)
-    update_drop(screen, dropping_mino)
-    draw_highlight(screen, highlight)
-
-def draw_deleted_lines(screen, y_list):
-    for y in y_list:
-        draw_deleted_line(screen, y)
-
-def draw_deleted_line(screen, y):
-    d_y = field_y + (y - 3) * block_size
-    pg.draw.rect(screen, COLOR_BG, [field_x, d_y, field_width, block_size])
+    # Note that this doesn't update screen if there is nothing in hold
+    def update_hold(self, hold_mino_id):
+        if hold_mino_id != None:
+            # delete current drawing first
+            pg.draw.rect(self.screen, COLOR_BG, [hold_x, hold_y, hold_width, hold_length])
+            self.draw_mino(hold_mino_id, hold_x, hold_y, hold_block_size, 0)
 
 
-def draw_highlight(screen, highlight):
-    for xy in highlight:
-        d_x = field_x + xy[0] * block_size
-        d_y = xy[1] * block_size + field_y - (23-20) * block_size
-        pg.draw.rect(screen, WHITE, [d_x, d_y, block_size, block_size], 5)
-        
-def main():
-    pg.init()
-    pg.display.set_caption("tetris")
-    screen = pg.display.set_mode((screen_width, screen_length))
+    def update_score(self, score, score_text):
+        # reset
+        pg.draw.rect(self.screen, COLOR_BG, [score_x, score_y, score_width, score_length])
+        # reset text
+        pg.draw.rect(self.screen, BLACK, [score_x, score_y + block_size, field_x - score_x, score_length])
+
+        # draw new value
+        font = pg.font.Font(None, block_size)
+        txt = font.render(str(score), True, WHITE)
+        self.screen.blit(txt, [score_x, score_y])
+        # show string "SCORE"
+        font = pg.font.Font(None, block_size)
+        txt = font.render(score_text, True, WHITE)
+        self.screen.blit(txt, [score_x, score_y + block_size])
+
+    def update_field(self, field):
+        self.draw_field()
+        for y in range(20):
+            for x in range(10):
+                if field[y + 3][x] > 0: # if there is a block
+                    color = COLORS[field[y + 3][x]]
+                    start_x = block_size * x + field_x
+                    start_y = block_size * y + field_y
+                    pg.draw.rect(self.screen, color, [start_x, start_y, block_size, block_size])
+                    # enclose it with bg color line
+                    pg.draw.rect(self.screen, COLOR_BG, [start_x, start_y, block_size, block_size], 1)
+
+    def draw_mino(self, mino_id, draw_x, draw_y, b_size, rot):
+        mino_layout = controller.minos[mino_id].block_data[rot] # 4 x 2
+        for xy in mino_layout:
+            d_x = draw_x + xy[0] * b_size
+            d_y = draw_y + xy[1] * b_size
+            pg.draw.rect(self.screen, COLORS[mino_id], [d_x, d_y, b_size, b_size])
+            pg.draw.rect(self.screen, COLOR_BG, [d_x, d_y, b_size, b_size], 1)
+
+    def update_nexts(self, next_minos):
+        for i in range(5):
+            draw_x = nexts_x[i]
+            draw_y = nexts_y[i]
+            pg.draw.rect(self.screen, COLOR_BG, [draw_x, draw_y, nexts_width, nexts_length])
+            self.draw_mino(next_minos[i], draw_x, draw_y, nexts_block_size, 0)
+
+    def update_drop(self, dropping_mino):
+        if dropping_mino != None:
+            d_x = dropping_mino.current_pos[0] * block_size + field_x
+            d_y = dropping_mino.current_pos[1] * block_size + field_y - (23-20) * block_size
+            self.draw_mino(dropping_mino.mino_id, d_x, d_y, block_size, dropping_mino.current_rot)
+            pg.draw.rect(self.screen, BLACK, [field_x, 0, field_width, block_size])
+            
+
+    def update_screen(self, field, dropping_mino, next_minos, score, score_text, hold_mino_id, highlight):
+        self.update_hold(hold_mino_id)
+        self.update_score(score, score_text)
+        self.update_field(field)
+        self.update_nexts(next_minos)
+        self.update_drop(dropping_mino)
+        self.draw_highlight(highlight)
+
+    def draw_deleted_lines(self, y_list):
+        for y in y_list:
+            self.draw_deleted_line(y)
+
+    def draw_deleted_line(self, y):
+        d_y = field_y + (y - 3) * block_size
+        pg.draw.rect(self.screen, COLOR_BG, [field_x, d_y, field_width, block_size])
+
+
+    def draw_highlight(self, highlight):
+        for xy in highlight:
+            d_x = field_x + xy[0] * block_size
+            d_y = xy[1] * block_size + field_y - (23-20) * block_size
+            pg.draw.rect(self.screen, WHITE, [d_x, d_y, block_size, block_size], 5)
+
+
+def main_menu():
+    pass
+
+def single_play(v):
+    
     # show basic screen
-    screen_init(screen)
+    v.screen_init()
 
 
     # initiate controller
-    ctl = controller(screen)
+    ctl = controller(v)
     ctl.init()
 
     clock = pg.time.Clock()
@@ -624,6 +630,14 @@ def main():
 
         clock.tick(10)
     print("gameover")
+
+        
+def main():
+    pg.init()
+    pg.display.set_caption("tetris")
+    screen = pg.display.set_mode((screen_width, screen_length))
+    v = view(screen)
+    single_play(v)
 
 if __name__ == '__main__':
     main()
