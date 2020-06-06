@@ -415,6 +415,7 @@ class controller:
             temp_next_mino_id = self.hold_mino_id
             self.hold_mino_id = self.dropping_mino.mino_id
             self.dropping_mino = controller.minos[temp_next_mino_id]
+        self.update_highlight()
     
     def update_highlight(self):
         self.highlight = []
