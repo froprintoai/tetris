@@ -53,6 +53,48 @@ nexts_text_y = block_size * 1
 nexts_x = [field_x + field_width + block_size * 2] * 5
 nexts_y = [nexts_text_y + block_size + i * (nexts_length + 10) for i in range(5)]
 
+# data for main menu
+# title should be the center of the screen
+title_name = 'Tetris'
+title_size = [800, 300]
+title_from_top = 100
+title_center = [screen_width / 2, title_from_top + title_size[1] / 2]
+title_x = title_center[0] - title_size[0] / 2
+title_y = title_from_top
+
+options_margin = 80 # margin between options
+# single play option layout data
+sp_size = [700, 160]
+sp_center = [
+             screen_width / 2,
+             title_y + title_size[1] + options_margin + sp_size[1] / 2
+            ]
+sp_x = sp_center[0] - sp_size[0] / 2
+sp_y = sp_center[1] - sp_size[1] / 2
+sp_color = (38, 17, 115)
+
+pause_option_x = 50
+pause_option_y = 50
+pause_option_size = [300, 50]
+
+pause_size = [800, 400]
+pause_center = [screen_width / 2, screen_length /2]
+pause_x = pause_center[0] - pause_size[0] / 2
+pause_y = pause_center[1] - pause_size[1] / 2
+pause_color = (0, 0, 150)
+
+pause_resume_from_top = 30
+pause_resume_size = [600, 150]
+pause_resume_center = [pause_center[0], pause_y + pause_resume_from_top + pause_resume_size[1] / 2]
+pause_resume_x = pause_resume_center[0] - pause_resume_size[0] / 2
+pause_resume_y = pause_y + pause_resume_from_top
+
+pause_to_menu_from_bottom = 30
+pause_to_menu_size = [600, 150]
+pause_to_menu_center = [pause_center[0], pause_y + pause_size[1] - pause_to_menu_from_bottom - pause_to_menu_size[1] / 2]
+pause_to_menu_x = pause_to_menu_center[0] - pause_to_menu_size[0] / 2
+pause_to_menu_y = pause_to_menu_center[1] - pause_to_menu_size[1] / 2
+
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 
@@ -125,47 +167,6 @@ jlostz_spawn = [4, 1]
 
 COLORS = [COLOR_BG, COLOR_I, COLOR_J, COLOR_L, COLOR_O, COLOR_S, COLOR_T, COLOR_Z]
 
-# data for main menu
-# title should be the center of the screen
-title_name = 'Tetris'
-title_size = [800, 300]
-title_from_top = 100
-title_center = [screen_width / 2, title_from_top + title_size[1] / 2]
-title_x = title_center[0] - title_size[0] / 2
-title_y = title_from_top
-
-options_margin = 80 # margin between options
-# single play option layout data
-sp_size = [700, 160]
-sp_center = [
-             screen_width / 2,
-             title_y + title_size[1] + options_margin + sp_size[1] / 2
-            ]
-sp_x = sp_center[0] - sp_size[0] / 2
-sp_y = sp_center[1] - sp_size[1] / 2
-sp_color = (38, 17, 115)
-
-pause_option_x = 50
-pause_option_y = 50
-pause_option_size = [300, 50]
-
-pause_size = [800, 400]
-pause_center = [screen_width / 2, screen_length /2]
-pause_x = pause_center[0] - pause_size[0] / 2
-pause_y = pause_center[1] - pause_size[1] / 2
-pause_color = (0, 0, 150)
-
-pause_resume_from_top = 30
-pause_resume_size = [600, 150]
-pause_resume_center = [pause_center[0], pause_y + pause_resume_from_top + pause_resume_size[1] / 2]
-pause_resume_x = pause_resume_center[0] - pause_resume_size[0] / 2
-pause_resume_y = pause_y + pause_resume_from_top
-
-pause_to_menu_from_bottom = 30
-pause_to_menu_size = [600, 150]
-pause_to_menu_center = [pause_center[0], pause_y + pause_size[1] - pause_to_menu_from_bottom - pause_to_menu_size[1] / 2]
-pause_to_menu_x = pause_to_menu_center[0] - pause_to_menu_size[0] / 2
-pause_to_menu_y = pause_to_menu_center[1] - pause_to_menu_size[1] / 2
 
 class tetrimino:
     # block_data is 4 x 4 x 2 list, each of 4 lists representing different rotation states
