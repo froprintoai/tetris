@@ -11,6 +11,7 @@ employed MVC model, where Controller stands as a class, which contains Model, an
 
 """
 
+# data for single play
 num_rows = 23
 num_columns = 10
 
@@ -123,6 +124,48 @@ i_spawn = [3, 0] #(x, y)
 jlostz_spawn = [4, 1]
 
 COLORS = [COLOR_BG, COLOR_I, COLOR_J, COLOR_L, COLOR_O, COLOR_S, COLOR_T, COLOR_Z]
+
+# data for main menu
+# title should be the center of the screen
+title_name = 'Tetris'
+title_size = [800, 300]
+title_from_top = 100
+title_center = [screen_width / 2, title_from_top + title_size[1] / 2]
+title_x = title_center[0] - title_size[0] / 2
+title_y = title_from_top
+
+options_margin = 80 # margin between options
+# single play option layout data
+sp_size = [700, 160]
+sp_center = [
+             screen_width / 2,
+             title_y + title_size[1] + options_margin + sp_size[1] / 2
+            ]
+sp_x = sp_center[0] - sp_size[0] / 2
+sp_y = sp_center[1] - sp_size[1] / 2
+sp_color = (38, 17, 115)
+
+pause_option_x = 50
+pause_option_y = 50
+pause_option_size = [300, 50]
+
+pause_size = [800, 400]
+pause_center = [screen_width / 2, screen_length /2]
+pause_x = pause_center[0] - pause_size[0] / 2
+pause_y = pause_center[1] - pause_size[1] / 2
+pause_color = (0, 0, 150)
+
+pause_resume_from_top = 30
+pause_resume_size = [600, 150]
+pause_resume_center = [pause_center[0], pause_y + pause_resume_from_top + pause_resume_size[1] / 2]
+pause_resume_x = pause_resume_center[0] - pause_resume_size[0] / 2
+pause_resume_y = pause_y + pause_resume_from_top
+
+pause_to_menu_from_bottom = 30
+pause_to_menu_size = [600, 150]
+pause_to_menu_center = [pause_center[0], pause_y + pause_size[1] - pause_to_menu_from_bottom - pause_to_menu_size[1] / 2]
+pause_to_menu_x = pause_to_menu_center[0] - pause_to_menu_size[0] / 2
+pause_to_menu_y = pause_to_menu_center[1] - pause_to_menu_size[1] / 2
 
 class tetrimino:
     # block_data is 4 x 4 x 2 list, each of 4 lists representing different rotation states
@@ -474,9 +517,9 @@ class view():
 
     # Note that this doesn't update screen if there is nothing in hold
     def update_hold(self, hold_mino_id):
+        self.draw_hold()
         if hold_mino_id != None:
             # delete current drawing first
-            pg.draw.rect(self.screen, COLOR_BG, [hold_x, hold_y, hold_width, hold_length])
             self.draw_mino(hold_mino_id, hold_x, hold_y, hold_block_size, 0)
 
 
@@ -537,6 +580,8 @@ class view():
         self.update_nexts(next_minos)
         self.update_drop(dropping_mino)
         self.draw_highlight(highlight)
+        self.draw_back_menu()
+        
 
     def draw_deleted_lines(self, y_list):
         for y in y_list:
@@ -552,14 +597,71 @@ class view():
             d_x = field_x + xy[0] * block_size
             d_y = xy[1] * block_size + field_y - (23-20) * block_size
             pg.draw.rect(self.screen, WHITE, [d_x, d_y, block_size, block_size], 5)
+    
+    def draw_back_menu(self):
+        pg.draw.rect(self.screen, sp_color, [pause_option_x, pause_option_y, pause_option_size[0], pause_option_size[1]])
+        font = pg.font.Font(None, pause_option_size[1])
+        txt = font.render("P: pause", True, WHITE)
+        rect = txt.get_rect()
+        rect.center = (200, 75)
+        self.screen.blit(txt, rect)
 
 
-def main_menu():
-    pass
+# return 0 if single play
+def main_menu(screen):
+    screen.fill(BLACK)
+    # show title text
+    show_option(screen, title_size, BLACK, title_name, WHITE, title_x, title_y, title_center)
 
-def single_play(v):
+    # show single play text
+    show_option(screen, sp_size, sp_color, "single play", WHITE, sp_x, sp_y, sp_center)
+    pg.display.update()
+
+    while True:
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                pg.quit()
+                sys.exit()
+        mouse_x, mouse_y = pg.mouse.get_pos()
+        left_clicked, _, _ = pg.mouse.get_pressed()
+        if left_clicked == 1:
+            if mouse_x > sp_x and mouse_x < sp_x + sp_size[0] \
+                and mouse_y > sp_y and mouse_y < sp_y + sp_size[1]:
+                return 0
+
+#return True for resume, False for back to main menu
+def pause(screen):
+    pg.draw.rect(screen, pause_color, [pause_x, pause_y, pause_size[0], pause_size[1]])
+    show_option(screen, pause_resume_size, pause_color, "resume", WHITE, pause_resume_x, pause_resume_y, pause_resume_center)
+    show_option(screen, pause_to_menu_size, pause_color, "main menu", WHITE, pause_to_menu_x, pause_to_menu_y, pause_to_menu_center)
+    pg.display.update()
+    while True:
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                pg.quit()
+                sys.exit()
+        mouse_x, mouse_y = pg.mouse.get_pos()
+        left_clicked, _, _ = pg.mouse.get_pressed()
+        if left_clicked == 1:
+            if mouse_x > pause_resume_x and mouse_x < pause_resume_x + pause_resume_size[0] \
+                and mouse_y > pause_resume_y and mouse_y < pause_resume_y + pause_resume_size[1]:
+                return True
+            if mouse_x > pause_to_menu_x and mouse_x < pause_to_menu_x + pause_to_menu_size[0] \
+                and mouse_y > pause_to_menu_y and mouse_y < pause_to_menu_y + pause_to_menu_size[1]:
+                return False
+
+def show_option(screen, bg_size, bg_color, txt, txt_color, x, y, center):
+    pg.draw.rect(screen, bg_color, [x, y, bg_size[0], bg_size[1]])
+    font = pg.font.Font(None, bg_size[1])
+    txt = font.render(txt, True, txt_color)
+    rect = txt.get_rect()
+    rect.center = (center[0], center[1])
+    screen.blit(txt, rect)
+
+def single_play(screen):
     
     # show basic screen
+    v = view(screen)
     v.screen_init()
 
 
@@ -574,7 +676,7 @@ def single_play(v):
     hold_used = False
     gameover = False
 
-    while gameover == False:
+    while True:
         tmr = tmr + 1
 
         # check user input
@@ -594,6 +696,8 @@ def single_play(v):
             if hard_drop_sensitive == 0:
                 ctl.hard_drop()
                 gameover = ctl.next_round()
+                if gameover:
+                    break
                 hold_used = False
                 tmr = 0
                 hard_drop_sensitive = 1
@@ -607,6 +711,11 @@ def single_play(v):
             if hold_used == False:
                 ctl.hold()
                 hold_used = True
+        if key[pg.K_p] == 1: #pause
+            resume = pause(screen)
+            if resume != True:
+                break
+            screen.fill(BLACK)
 
         # control soft drop
         if tmr > 10:
@@ -615,6 +724,8 @@ def single_play(v):
             land = ctl.soft_drop()
             if land == 1:
                 gamevoer = ctl.next_round()
+                if gameover:
+                    break
                 hold_used = False
 
                 ctl.update_view()
@@ -623,21 +734,27 @@ def single_play(v):
 
                 continue
 
-
         # update view
         ctl.update_view()
         pg.display.update()
 
         clock.tick(10)
-    print("gameover")
-
         
 def main():
     pg.init()
     pg.display.set_caption("tetris")
     screen = pg.display.set_mode((screen_width, screen_length))
-    v = view(screen)
-    single_play(v)
+
+    while True:
+        select = main_menu(screen)
+        if select == 0:
+            single_play(screen)
+        elif select == 1:
+            pass
+        elif select == 2:
+            pass
+
+
 
 if __name__ == '__main__':
     main()
