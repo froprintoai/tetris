@@ -145,22 +145,38 @@ sp_x = sp_center[0] - sp_size[0] / 2
 sp_y = sp_center[1] - sp_size[1] / 2
 sp_color = (38, 17, 115)
 
+#online play option layout data
+op_size = [700, 160]
+op_center = [
+            screen_width / 2,
+            sp_y + sp_size[1] + options_margin + op_size[1] / 2
+           ]
+op_x = op_center[0] - op_size[0] / 2
+op_y = op_center[1] - op_size[1] / 2
+op_color = (100, 0, 0)
+
+
+# p: pause layout while playing
 pause_option_x = 50
 pause_option_y = 50
 pause_option_size = [300, 50]
 
+# pause layout
+#   pause background
 pause_size = [800, 400]
 pause_center = [screen_width / 2, screen_length /2]
 pause_x = pause_center[0] - pause_size[0] / 2
 pause_y = pause_center[1] - pause_size[1] / 2
 pause_color = (0, 0, 150)
 
+#   pause resume button
 pause_resume_from_top = 30
 pause_resume_size = [600, 150]
 pause_resume_center = [pause_center[0], pause_y + pause_resume_from_top + pause_resume_size[1] / 2]
 pause_resume_x = pause_resume_center[0] - pause_resume_size[0] / 2
 pause_resume_y = pause_y + pause_resume_from_top
 
+#   pause back-to-menu button
 pause_to_menu_from_bottom = 30
 pause_to_menu_size = [600, 150]
 pause_to_menu_center = [pause_center[0], pause_y + pause_size[1] - pause_to_menu_from_bottom - pause_to_menu_size[1] / 2]
@@ -617,6 +633,10 @@ def main_menu(screen):
     show_option(screen, sp_size, sp_color, "single play", WHITE, sp_x, sp_y, sp_center)
     pg.display.update()
 
+    # show online play text
+    show_option(screen, op_size, op_color, "online play", WHITE, op_x, op_y, op_center)
+    pg.display.update()
+
     while True:
         for event in pg.event.get():
             if event.type == pg.QUIT:
@@ -628,6 +648,10 @@ def main_menu(screen):
             if mouse_x > sp_x and mouse_x < sp_x + sp_size[0] \
                 and mouse_y > sp_y and mouse_y < sp_y + sp_size[1]:
                 return 0
+            if mouse_x > op_x and mouse_x < op_x + op_size[0] \
+                and mouse_y > op_y and mouse_y < op_y + op_size[1]:
+                return 1
+
 
 #return True for resume, False for back to main menu
 def pause(screen):
@@ -739,6 +763,9 @@ def single_play(screen):
         pg.display.update()
 
         clock.tick(10)
+
+def online_play(screen):
+    pass
         
 def main():
     pg.init()
@@ -750,7 +777,7 @@ def main():
         if select == 0:
             single_play(screen)
         elif select == 1:
-            pass
+            online_play(screen)
         elif select == 2:
             pass
 
