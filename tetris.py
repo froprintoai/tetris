@@ -4,6 +4,7 @@ import sys
 import random
 import time
 import numpy as np
+import asyncio
 
 """
 tetris implemented using pygame
@@ -488,6 +489,9 @@ class controller:
         for xy in block_offset:
             self.highlight.append([xy[0] + x_position, xy[1] + y_position])
 
+class online_controller(controller):
+    def __init__(self):
+        pass
 
 class view():
     def __init__(self, screen):
@@ -622,6 +626,9 @@ class view():
         rect.center = (200, 75)
         self.screen.blit(txt, rect)
 
+def online_view(view):
+    def __init__(self, screen):
+        super().__init__(screen)
 
 # return 0 if single play
 def main_menu(screen):
@@ -715,7 +722,7 @@ def single_play(screen):
         if key[pg.K_s] == 1: # right
             ctl.move_x(1)
         if key[pg.K_z] == 1: # down
-            tmr += 8 
+            tmr += 6 
         if key[pg.K_w] == 1: # hard drop
             if hard_drop_sensitive == 0:
                 ctl.hard_drop()
@@ -742,7 +749,7 @@ def single_play(screen):
             screen.fill(BLACK)
 
         # control soft drop
-        if tmr > 10:
+        if tmr > 7:
             hard_drop_sensitive = 0
             tmr = 0
             land = ctl.soft_drop()
@@ -764,8 +771,29 @@ def single_play(screen):
 
         clock.tick(10)
 
+async def show_loading(screen):
+    screen.fill(BLACK)
+    font = pg.font.Font(None, 30)
+    for i in range(1,4):
+        txt = "Finding a player online" + ". " * i
+        txt = font.render(txt, True, WHITE)
+        screen.blit(txt, [10, 10])
+        pg.display.update()
+        await asyncio.sleep(1)
+
+
+async def find_oponent():
+    await asyncio.sleep(30)
+
+async def matching(screen):
+    task_screen = asyncio.create_task(show_loading(screen))
+    task_match = asyncio.create_task(find_oponent())
+
+    await task_screen
+    await task_match
+
 def online_play(screen):
-    pass
+    asyncio.run(matching(screen))
         
 def main():
     pg.init()
