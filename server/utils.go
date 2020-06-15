@@ -21,8 +21,7 @@ func NewPlayer(ip *net.IP) *Player {
 }
 
 type Room struct {
-	player1 *Player
-	player2 *Player
+	players [2]*Player
 }
 
 type Rooms struct {
