@@ -4,19 +4,11 @@ import (
 	"log"
 	"net"
 	"os"
+	"sync"
 )
 
-var Queue *PlayersQueue
-var Rooms []*Room
-
-func main() {
-	// server address
-	udpAddr := &net.UDPAddr{
-		IP:   net.ParseIP("127.0.0.1"),
-		Port: 8080,
-	}
-
-	udpLn, err := net.ListenUDP("udp", udpAddr)
+func UDPServer(wg *sync.WaitGroup) {
+	udpLn, err := net.ListenUDP("udp", laddrUDP)
 
 	if err != nil {
 		log.Fatalln(err)
@@ -35,4 +27,6 @@ func main() {
 
 		go packetHandler(n, addr, buf)
 	}
+	wg.Done()
+
 }
