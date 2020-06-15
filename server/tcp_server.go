@@ -28,9 +28,6 @@ func TCPServer(wg *sync.WaitGroup) {
 			log.Println("error in TCPServer : ", err)
 			continue
 		}
-		// initialize a element of tracker
-		raddrString := conn.RemoteAddr().String()
-		tracker[raddrString] = make(chan int, 2)
 		go handleTCPConnection(conn, playerQueue)
 	}
 
@@ -47,10 +44,14 @@ func handleTCPConnection(conn *net.TCPConn, q chan<- *Player) {
 	if err != nil {
 		// handle error
 		log.Println("error in handleTCPConnection : failed to read from conn : ", err)
-		delete(tracker, raddr.String())
 	} else if n > 3 {
 		magicNumber := buf[0:2]
 		if bytes.Equal(magicNumber, []byte("AB")) { // initial request
+
+			// initialize a element of tracker
+			raddrString := conn.RemoteAddr().String()
+			tracker[raddrString] = make(chan int, 2)
+
 			host, port, err := net.SplitHostPort(raddr.String())
 			if err != nil {
 				// handle error
@@ -98,11 +99,28 @@ func handleTCPConnection(conn *net.TCPConn, q chan<- *Player) {
 					rooms.Delete(index)
 				}
 			}
-
+		} else if bytes.Equal(magicNumber, []byte("XX")) { // Gameover
+			// send "You Won" message to the opponent player
+			roomIndex := int(buf[2])
+			roomSide := int(buf[3])
+			dest := rooms.OponentTCPAddress(roomIndex, roomSide)
+			if dest != nil {
+				conn, err := net.DialTCP("tcp", laddrTCP, dest)
+				if err != nil {
+					log.Println("Error in handleTCPConnection : failed to notify winner :", err)
+				} else {
+					defer conn.Close()
+					_, err = conn.Write([]byte("VI")) // "VI"CTORY
+					if err != nil {
+						log.Println("Error in handleTCPConnection : failed to notify winner :", err)
+					}
+				}
+			}
+			// delete room
+			rooms.Delete(roomIndex)
 		}
 
 	} else {
-		delete(tracker, raddr.String())
 	}
 
 }

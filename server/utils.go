@@ -1,6 +1,9 @@
 package main
 
-import "net"
+import (
+	"net"
+	"time"
+)
 
 type Player struct {
 	addrTCP *net.TCPAddr
@@ -21,7 +24,8 @@ func NewPlayer(ip *net.IP) *Player {
 }
 
 type Room struct {
-	players [2]*Player
+	players    [2]*Player
+	lastAccess [2]time.Time
 }
 
 type Rooms struct {
@@ -78,4 +82,39 @@ func (rs *Rooms) Delete(index int) {
 	rs.LockSlice[index] <- 1 // lock
 	rs.RoomSlice[index] = nil
 	<-rs.LockSlice[index] // unlock
+}
+
+// atomic access
+func (rs *Rooms) OponentUDPAddress(index int, side int) (addr *net.UDPAddr) {
+	otherSide := 1 - side // 1 or 0
+	rooms.LockSlice[index] <- 1
+	if rooms.RoomSlice[index] != nil {
+		addr = rooms.RoomSlice[index].players[otherSide].addrUDP
+	} else {
+		addr = nil
+	}
+	<-rooms.LockSlice[index]
+	return addr
+}
+
+// atomic access
+func (rs *Rooms) OponentTCPAddress(index int, side int) (addr *net.TCPAddr) {
+	otherSide := 1 - side // 1 or 0
+	rooms.LockSlice[index] <- 1
+	if rooms.RoomSlice[index] != nil {
+		addr = rooms.RoomSlice[index].players[otherSide].addrTCP
+	} else {
+		addr = nil
+	}
+	<-rooms.LockSlice[index]
+	return addr
+}
+
+// atomic access
+func (rs *Rooms) UpdateAccess(index int, side int) {
+	rooms.LockSlice[index] <- 1
+	if rooms.RoomSlice[index] != nil {
+		rooms.RoomSlice[index].lastAccess[side] = time.Now()
+	}
+	<-rooms.LockSlice[index]
 }

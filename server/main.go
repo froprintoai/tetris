@@ -44,10 +44,11 @@ func init() {
 
 func main() {
 	var wg sync.WaitGroup
-	wg.Add(2)
+	wg.Add(3)
 
 	go UDPServer(&wg)
 	go TCPServer(&wg)
+	go sweeper(&wg)
 
 	wg.Wait()
 
