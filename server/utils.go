@@ -73,3 +73,9 @@ func (rs *Rooms) Insert(r *Room) (index int, err error) {
 	}
 	return
 }
+
+func (rs *Rooms) Delete(index int) {
+	rs.LockSlice[index] <- 1 // lock
+	rs.RoomSlice[index] = nil
+	<-rs.LockSlice[index] // unlock
+}
