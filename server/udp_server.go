@@ -24,6 +24,8 @@ func UDPServer(wg *sync.WaitGroup) {
 			log.Println("Error in UDPServer : Failed to read from client: ", err)
 			continue
 		}
+		//temp := buf[:n]
+		//log.Println("get from ", addr, " message : ", temp)
 
 		go packetHandler(udpLn, n, addr, buf)
 	}
@@ -41,6 +43,7 @@ func packetHandler(conn *net.UDPConn, n int, remoteAddr *net.UDPAddr, buf []byte
 			stack := buf[4:n]                                    // stack info
 			if dest != nil {
 				contents := append([]byte("XY"), stack...)
+				log.Println("sending ... ", contents)
 				_, err := conn.WriteToUDP(contents, dest)
 				if err != nil {
 					log.Println("error in packetHandler : failed to write : ", err)

@@ -5,6 +5,7 @@ import random
 import time
 import numpy as np
 import asyncio
+from collections import namedtuple
 
 """
 tetris implemented using pygame
@@ -53,6 +54,11 @@ nexts_text_x = field_x + field_width + block_size * 2
 nexts_text_y = block_size * 1
 nexts_x = [field_x + field_width + block_size * 2] * 5
 nexts_y = [nexts_text_y + block_size + i * (nexts_length + 10) for i in range(5)]
+
+op_field_x = nexts_x[0] + nexts_width + 80
+op_field_y = field_y
+op_field_width = field_width
+op_field_length = field_length
 
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
@@ -183,6 +189,21 @@ pause_to_menu_size = [600, 150]
 pause_to_menu_center = [pause_center[0], pause_y + pause_size[1] - pause_to_menu_from_bottom - pause_to_menu_size[1] / 2]
 pause_to_menu_x = pause_to_menu_center[0] - pause_to_menu_size[0] / 2
 pause_to_menu_y = pause_to_menu_center[1] - pause_to_menu_size[1] / 2
+
+# server info
+server_ip = '127.0.0.1'
+server_tcp_port = 8000
+server_udp_port = 8080
+maxRooms = 32
+
+# client info 
+client_ip = '127.0.0.1'
+client_tcp_port = 16330
+# this port is used by UDP server
+client_udp_port = 16340
+# this port is used as a local port when sending layout and fire to the UDP server
+client_udp_port_sending = 16350
+
 
 class tetrimino:
     # block_data is 4 x 4 x 2 list, each of 4 lists representing different rotation states
@@ -489,9 +510,98 @@ class controller:
         for xy in block_offset:
             self.highlight.append([xy[0] + x_position, xy[1] + y_position])
 
-class online_controller(controller):
-    def __init__(self):
+
+class ClientProtocol:
+    def __init__(self, message, on_con_lost):
+        self.message = message
+        self.on_con_lost = on_con_lost
+        self.transport = None
+
+    def connection_made(self, transport):
+        self.transport = transport
+        self.transport.sendto(self.message)
+        self.transport.close()
+
+    def datagram_received(self, data, addr):
         pass
+
+    def error_received(self, exc):
+        print("error occured in ClientProtocol")
+
+    def connection_lost(self, exc):
+        self.on_con_lost.set_result(True)
+
+
+class ServerProtocol:
+    def __init__(self):
+        self.data_received = None
+
+    def connection_made(self, transport):
+        self.transport = transport
+
+    def datagram_received(self, data, addr):
+        message = data.decode()
+        print('Received %r from %s' % (message, addr))
+        self.data_received = data
+
+class online_controller(controller):
+    def __init__(self, view, ri, rs):
+        super(online_controller, self).__init__(view)
+        self.opponent_layout = [[0 for i in range(10)] for j in range(20)]
+        self.incoming_fire = fire()
+        self.ren = 0
+        self.btb_ready = False
+        self.room_index = ri
+        self.room_side = rs
+
+    async def send_layout(self):
+        loop = asyncio.get_running_loop()
+        on_con_lost = loop.create_future()
+        layout = self.get_layout()
+        transport, protocol = await loop.create_datagram_endpoint(
+            lambda: ClientProtocol(layout, on_con_lost),
+            local_addr=(client_ip, client_udp_port_sending),
+            remote_addr=(server_ip, server_udp_port))
+
+        try:
+            await on_con_lost
+        finally:
+            transport.close()
+
+    # C D index side info
+    def get_layout(self):
+        return ('CD').encode() + (self.room_index).to_bytes(1, "big") + (self.room_side).to_bytes(1, "big") + ('hello').encode()
+
+    async def receive_layout(self, event, update_rate=0.1):
+        loop = asyncio.get_running_loop()
+        transport, protocol = await loop.create_datagram_endpoint(
+            lambda: ServerProtocol(),
+            local_addr=(client_ip, client_udp_port),
+        )
+        while event.is_set() != True:
+            await asyncio.sleep(update_rate)
+            self.update_op_layout(protocol.data_received)
+        transport.close()
+
+    def update_op_layout(self, byte_data):
+        print("update op layout")
+        print(byte_data)
+
+
+
+Stack = namedtuple('Stack', ['timer', 'lines'])
+class fire:
+    def __init_(self):
+        self.stacks = []
+    def add(self, num):
+        self.stacks.append(Stack(timer=5, lines=num))
+    def count(self):
+        numLines = 0
+        for stack in self.stacks:
+            stack.timer -= 1
+            if stack.timer == 0:
+                numLines += stack.lines
+        return numLines
 
 class view():
     def __init__(self, screen):
@@ -626,9 +736,19 @@ class view():
         rect.center = (200, 75)
         self.screen.blit(txt, rect)
 
-def online_view(view):
+class online_view(view):
     def __init__(self, screen):
-        super().__init__(screen)
+        super(online_view, self).__init__(screen)
+    
+    def screen_init(self):
+        super(online_view, self).screen_init()
+        self.draw_op_field()
+    
+    def draw_op_field(self):
+        pg.draw.rect(self.screen, BLACK, [op_field_x, op_field_y, op_field_width, op_field_length], 5)
+        pg.draw.rect(self.screen, COLOR_BG, [op_field_x, op_field_y, op_field_width, op_field_length])
+        
+
 
 # return 0 if single play
 def main_menu(screen):
@@ -773,28 +893,161 @@ def single_play(screen):
 
 async def show_loading(screen):
     screen.fill(BLACK)
-    font = pg.font.Font(None, 30)
-    for i in range(1,4):
+    font = pg.font.Font(None, 80)
+    for i in range(1, 4):
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                pg.quit()
+                sys.exit()
+        i += 1
         txt = "Finding a player online" + ". " * i
         txt = font.render(txt, True, WHITE)
         screen.blit(txt, [10, 10])
         pg.display.update()
         await asyncio.sleep(1)
 
-
 async def find_oponent():
-    await asyncio.sleep(30)
+    counter = 0
+    while True:
+        try:
+            reader, writer = await asyncio.open_connection(
+                server_ip, server_tcp_port)
+        except ConnectionRefusedError:
+            await asyncio.sleep(1)
+            counter += 1
+            if counter < 5:
+                continue
+            else:
+                return
+        except Exception:
+            raise
+        else:
+            b_udp_port = client_udp_port.to_bytes(2, 'big')
+            magic_num = ('AB').encode()
+            writer.write(magic_num + b_udp_port)
+            await writer.drain()
+
+            data = await reader.read(100)
+            writer.close()
+            await writer.wait_closed()
+            return data[0], data[1]
 
 async def matching(screen):
     task_screen = asyncio.create_task(show_loading(screen))
     task_match = asyncio.create_task(find_oponent())
 
+    room_index, room_side = await task_match
     await task_screen
-    await task_match
+    return room_index, room_side
 
-def online_play(screen):
-    asyncio.run(matching(screen))
+async def game_start(ctl, screen, event):
+    clock = pg.time.Clock()
+    tmr = 0
+    hard_drop_sensitive = 0
+    hold_used = False
+    gameover = False
+
+    udp_send_tasks = []
+
+    while True:
+        tmr = tmr + 1
+
+        # check user input
+        # if the block is rotated when it touches the stack or floor, tmr need to be decreased so it allows block to float for a while
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                pg.quit()
+                sys.exit()
+        key = pg.key.get_pressed()
+        if key[pg.K_a] == 1: # left
+            ctl.move_x(-1)
+        if key[pg.K_s] == 1: # right
+            ctl.move_x(1)
+        if key[pg.K_z] == 1: # down
+            tmr += 6 
+        if key[pg.K_w] == 1: # hard drop
+            if hard_drop_sensitive == 0:
+                ctl.hard_drop()
+                gameover = ctl.next_round()
+                if gameover:
+                    break
+                hold_used = False
+                tmr = 0
+                hard_drop_sensitive = 1
+            else:
+                hard_drop_sensitive = 0
+        if key[pg.K_RIGHT] == 1: # rotate clockwise
+            ctl.rotate(1)
+        if key[pg.K_LEFT] == 1: # rotate counterclockwise
+            ctl.rotate(-1)
+        if key[pg.K_SPACE] == 1: #hold
+            if hold_used == False:
+                ctl.hold()
+                hold_used = True
+        if key[pg.K_p] == 1: #pause
+            resume = pause(screen)
+            if resume != True:
+                break
+            screen.fill(BLACK)
+
+        # control soft drop
+        if tmr > 7:
+            hard_drop_sensitive = 0
+            tmr = 0
+            land = ctl.soft_drop()
+            if land == 1:
+                gamevoer = ctl.next_round()
+                if gameover:
+                    break
+                hold_used = False
+
+                ctl.update_view()
+                pg.display.update()
+                clock.tick(10)
+
+                continue
         
+        # update view
+        ctl.update_view()
+        pg.display.update()
+
+        # give up the time to other coroutines
+        await asyncio.sleep(0.1)
+
+        clock.tick(10)
+    event.set()
+
+async def layout_sender(ctl, event):
+    while event.is_set() != True:
+        await asyncio.sleep(0.5)
+        await ctl.send_layout()
+
+
+async def online_play(screen):
+    room_index, room_side = await matching(screen)
+    if room_index == None:
+        return
+    elif room_index == 32:
+        print("Server Error")
+        return
+    
+    # show basic screen
+    v = online_view(screen)
+    v.screen_init()
+
+    ctl = online_controller(v, room_index, room_side)
+    ctl.init()
+
+    # synchronized using event
+    # game_start is the event setter
+    event = asyncio.Event()
+    udp_receive_task = asyncio.create_task(ctl.receive_layout(event))
+    await asyncio.gather(
+        game_start(ctl, screen, event),
+        layout_sender(ctl, event),
+        udp_receive_task
+    )
+
 def main():
     pg.init()
     pg.display.set_caption("tetris")
@@ -805,7 +1058,7 @@ def main():
         if select == 0:
             single_play(screen)
         elif select == 1:
-            online_play(screen)
+            asyncio.run(online_play(screen))
         elif select == 2:
             pass
 
@@ -813,3 +1066,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

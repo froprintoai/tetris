@@ -10,6 +10,9 @@ var laddrUDP *net.UDPAddr
 var laddrTCP *net.TCPAddr
 
 var tracker map[string]chan int
+var playerQueue chan *Player
+
+var locker *sync.Mutex
 
 const maxRooms = 32
 
@@ -40,6 +43,8 @@ func init() {
 	}
 
 	tracker = make(map[string]chan int, maxRooms*2)
+	playerQueue = make(chan *Player, 64)
+	locker = &sync.Mutex{}
 }
 
 func main() {

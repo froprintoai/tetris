@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net"
 	"sync"
@@ -17,7 +16,6 @@ import (
 func sweeper(wg *sync.WaitGroup) {
 	for {
 		time.Sleep(time.Second * 10)
-		fmt.Println("here")
 		for i := 0; i < maxRooms; i++ {
 			rooms.LockSlice[i] <- 1 // lock
 			if rooms.RoomSlice[i] != nil {
@@ -59,7 +57,6 @@ func sweeper(wg *sync.WaitGroup) {
 			}
 			<-rooms.LockSlice[i] // unlock
 		}
-		fmt.Println("here")
 	}
 
 	wg.Done()

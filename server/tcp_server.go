@@ -2,16 +2,16 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 	"net"
 	"os"
 	"strconv"
 	"sync"
+	"time"
 )
 
 func TCPServer(wg *sync.WaitGroup) {
-	playerQueue := make(chan *Player, 64)
-
 	listener, err := net.ListenTCP("tcp", laddrTCP)
 	if err != nil {
 		log.Println("Error in starting server : ", err)
@@ -20,21 +20,22 @@ func TCPServer(wg *sync.WaitGroup) {
 
 	log.Println("Starting TCP Server...")
 
-	go consume(playerQueue)
+	go consume()
 
 	for {
 		conn, err := listener.AcceptTCP()
+		fmt.Println("herehere")
 		if err != nil {
 			log.Println("error in TCPServer : ", err)
 			continue
 		}
-		go handleTCPConnection(conn, playerQueue)
+		go handleTCPConnection(conn)
 	}
 
 	wg.Done()
 }
 
-func handleTCPConnection(conn *net.TCPConn, q chan<- *Player) {
+func handleTCPConnection(conn *net.TCPConn) {
 	defer conn.Close()
 
 	raddr := conn.RemoteAddr()
@@ -79,10 +80,23 @@ func handleTCPConnection(conn *net.TCPConn, q chan<- *Player) {
 				},
 			}
 
-			q <- player
+			locker.Lock()
+			playerQueue <- player
+			locker.Unlock()
+
+			pending := &Pending{
+				Waiting: true,
+				Lock:    &sync.Mutex{},
+			}
+			go timeoutDetector(player, pending)
 
 			index := <-tracker[raddr.String()]
 			side := <-tracker[raddr.String()]
+
+			pending.Lock.Lock()
+			pending.Waiting = false
+			pending.Lock.Unlock()
+
 			log.Println("side : ", side)
 
 			if index == maxRooms { // couldn't find an available room
@@ -125,26 +139,38 @@ func handleTCPConnection(conn *net.TCPConn, q chan<- *Player) {
 
 }
 
-func consume(q <-chan *Player) {
+func consume() {
 	for {
-		p1 := <-q
-		p2 := <-q
-		room := &Room{
-			players: [2]*Player{p1, p2},
-		}
-		index, err := rooms.Insert(room)
-		if err != nil {
-			// handle error
-			log.Println("error from consume: ", err)
+		p1 := <-playerQueue
+		p2 := <-playerQueue
+		log.Println(p1.addrTCP.String())
+		log.Println(p2.addrTCP.String())
+		//if p1.addrTCP.IP.String() == p2.addrTCP.IP.String() { // this is for released version
+		if p1.addrTCP.String() == p2.addrTCP.String() { // develop version
+			log.Println("same player detected")
 			tracker[p1.addrTCP.String()] <- maxRooms
 			tracker[p1.addrTCP.String()] <- 2
 			tracker[p2.addrTCP.String()] <- maxRooms
 			tracker[p2.addrTCP.String()] <- 2
 		} else {
-			tracker[p1.addrTCP.String()] <- index
-			tracker[p1.addrTCP.String()] <- 0
-			tracker[p2.addrTCP.String()] <- index
-			tracker[p2.addrTCP.String()] <- 1
+			room := &Room{
+				players: [2]*Player{p1, p2},
+			}
+			index, err := rooms.Insert(room)
+			if err != nil {
+				// handle error
+				log.Println("error from consume: ", err)
+				tracker[p1.addrTCP.String()] <- maxRooms
+				tracker[p1.addrTCP.String()] <- 2
+				tracker[p2.addrTCP.String()] <- maxRooms
+				tracker[p2.addrTCP.String()] <- 2
+			} else {
+				tracker[p1.addrTCP.String()] <- index
+				tracker[p1.addrTCP.String()] <- 0
+				tracker[p2.addrTCP.String()] <- index
+				tracker[p2.addrTCP.String()] <- 1
+			}
+
 		}
 	}
 }
@@ -153,4 +179,15 @@ func consume(q <-chan *Player) {
 // 65(0100 0000) 31(0001 1111) --> 16671(0100 0000 0001 1111)
 func convToPort(b1 byte, b2 byte) (port int) {
 	return (int(b1) << 8) + int(b2)
+}
+
+func timeoutDetector(player *Player, pending *Pending) {
+	time.Sleep(time.Second * 8)
+	locker.Lock()
+	pending.Lock.Lock()
+	if pending.Waiting {
+		playerQueue <- player
+	}
+	pending.Lock.Unlock()
+	locker.Unlock()
 }

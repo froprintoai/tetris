@@ -2,8 +2,14 @@ package main
 
 import (
 	"net"
+	"sync"
 	"time"
 )
+
+type Pending struct {
+	Waiting bool
+	Lock    *sync.Mutex
+}
 
 type Player struct {
 	addrTCP *net.TCPAddr
@@ -53,7 +59,7 @@ func (rs *Rooms) Insert(r *Room) (index int, err error) {
 		if rs.RoomSlice[currentIndex] == nil { // empty
 			rs.RoomSlice[currentIndex] = r
 			rs.LockOffset <- 1 // lock offset
-			rs.Offset = currentIndex + 1
+			rs.Offset = (currentIndex + 1) % maxRooms
 			<-rs.LockOffset              // unlock offset
 			<-rs.LockSlice[currentIndex] // unlock
 
