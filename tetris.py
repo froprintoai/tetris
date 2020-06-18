@@ -6,6 +6,7 @@ import time
 import numpy as np
 import asyncio
 from collections import namedtuple
+import copy
 
 """
 tetris implemented using pygame
@@ -540,8 +541,8 @@ class ServerProtocol:
         self.transport = transport
 
     def datagram_received(self, data, addr):
-        message = data.decode()
-        print('Received %r from %s' % (message, addr))
+        #message = data.decode()
+        #print('Received %r from %s' % (message, addr))
         self.data_received = data
 
 class online_controller(controller):
@@ -570,7 +571,19 @@ class online_controller(controller):
 
     # C D index side info
     def get_layout(self):
-        return ('CD').encode() + (self.room_index).to_bytes(1, "big") + (self.room_side).to_bytes(1, "big") + ('hello').encode()
+        suffix = ('CD').encode() + (self.room_index).to_bytes(1, "big") + (self.room_side).to_bytes(1, "big")
+        layout = self.create_layout()
+        byte_field = [bytes(line) for line in layout[3:]] # ignore first three lines out of screen
+        for byte_line in byte_field:
+            suffix += bytes(byte_line)
+        return suffix
+
+    def create_layout(self):
+        new_layout = copy.deepcopy(self.field)
+        d_mino_space = self.dropping_mino.current_space()
+        for x, y in d_mino_space:
+            new_layout[y][x] = self.dropping_mino.mino_id
+        return new_layout
 
     async def receive_layout(self, event, update_rate=0.1):
         loop = asyncio.get_running_loop()
@@ -580,12 +593,39 @@ class online_controller(controller):
         )
         while event.is_set() != True:
             await asyncio.sleep(update_rate)
-            self.update_op_layout(protocol.data_received)
+            if protocol.data_received != None:
+                if protocol.data_received[:2] == ('XY').encode():
+                    self.update_op_layout(protocol.data_received[2:])
+                else: # fire check
+                    pass
         transport.close()
 
-    def update_op_layout(self, byte_data):
+    def update_op_layout(self, bytes_layout):
         print("update op layout")
-        print(byte_data)
+        for i, bytes_line in enumerate(self.line_generator(bytes_layout)):
+            #self.opponent_layout[i] = [int.from_bytes(b, "big") for b in bytes_line]
+            length = len(bytes_line)
+            if length == 10:
+                self.opponent_layout[i] = [b for b in bytes_line]
+            elif length < 10:
+                self.opponent_layout[i] = [bytes_line[i] if i < length else 0 for i in range(10)]
+        print(self.opponent_layout)
+
+    # take bytesarray and generate its contents 10 bytes per once
+    def line_generator(self, bytes_field):
+        i = 0
+        while True:
+            yield bytes_field[i:i+10]
+            i += 10 
+            if i >= len(bytes_field):
+                break
+
+    # update View based on Model (MVC)
+    def update_view(self):
+        self.view.update_screen(self.field, self.dropping_mino,
+                                self.next_minos, self.score, self.score_text,
+                                 self.hold_mino_id, self.highlight, self.opponent_layout)
+    
 
 
 
@@ -748,6 +788,22 @@ class online_view(view):
         pg.draw.rect(self.screen, BLACK, [op_field_x, op_field_y, op_field_width, op_field_length], 5)
         pg.draw.rect(self.screen, COLOR_BG, [op_field_x, op_field_y, op_field_width, op_field_length])
         
+    def update_screen(self, field, dropping_mino, next_minos, score, score_text, hold_mino_id, highlight, op_layout):
+        super(online_view, self).update_screen(field, dropping_mino, next_minos, score, score_text, hold_mino_id, highlight)
+        self.update_op_field(op_layout)
+        
+    def update_op_field(self, op_layout):
+        self.draw_op_field()
+        for y in range(20):
+            for x in range(10):
+                if op_layout[y][x] > 0: # if there is a block
+                    color = COLORS[op_layout[y][x]]
+                    start_x = block_size * x + op_field_x
+                    start_y = block_size * y + op_field_y
+                    pg.draw.rect(self.screen, color, [start_x, start_y, block_size, block_size])
+                    # enclose it with bg color line
+                    pg.draw.rect(self.screen, COLOR_BG, [start_x, start_y, block_size, block_size], 1)
+
 
 
 # return 0 if single play
@@ -1007,12 +1063,13 @@ async def game_start(ctl, screen, event):
 
                 continue
         
+        # give up the time to other coroutines
+        await asyncio.sleep(0.1)
+
         # update view
         ctl.update_view()
         pg.display.update()
 
-        # give up the time to other coroutines
-        await asyncio.sleep(0.1)
 
         clock.tick(10)
     event.set()
