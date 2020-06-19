@@ -158,8 +158,10 @@ async def online_play(screen):
     # game_start is the event setter
     event = asyncio.Event()
     udp_receive_task = asyncio.create_task(ctl.receive_layout(event))
+    fire_send_task = asyncio.create_task(ctl.send_fire(event))
     await asyncio.gather(
         game_start(ctl, screen, event),
         layout_sender(ctl, event),
-        udp_receive_task
+        udp_receive_task,
+        fire_send_task
     )

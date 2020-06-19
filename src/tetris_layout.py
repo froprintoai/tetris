@@ -54,8 +54,10 @@ COLOR_O = (243, 250, 0)
 COLOR_S = (114, 238, 0)
 COLOR_T = (140, 3, 140)
 COLOR_Z = (250, 0, 0)
+# color for fires
+COLOR_F = (65, 85, 86)
 
-COLORS = [COLOR_BG, COLOR_I, COLOR_J, COLOR_L, COLOR_O, COLOR_S, COLOR_T, COLOR_Z]
+COLORS = [COLOR_BG, COLOR_I, COLOR_J, COLOR_L, COLOR_O, COLOR_S, COLOR_T, COLOR_Z, COLOR_F]
 
 # data for main menu
 # title should be the center of the screen

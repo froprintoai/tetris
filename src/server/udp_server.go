@@ -44,8 +44,10 @@ func packetHandler(conn *net.UDPConn, n int, remoteAddr *net.UDPAddr, buf []byte
 			var suffix []byte
 			if bytes.Equal(magicNumber, []byte("CD")) {
 				suffix = []byte("XY") // stack
-			} else {
+			} else if bytes.Equal(magicNumber, []byte("EF")) {
+				log.Println("get fire")
 				suffix = []byte("FI") // fire
+				log.Println("Sending to ", dest.String())
 			}
 			if dest != nil {
 				contents := append(suffix, info...)

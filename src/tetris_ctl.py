@@ -29,6 +29,8 @@ class controller:
         7: Z_mino
     }
 
+    # last_deleted is whether any line was deleted at last round
+    # btb_ready is wheter last deletion was either t-spin or tetris
     def __init__(self, v):
         self.view = v
         self.field = [[0 for i in range(10)] for j in range(23)]
@@ -39,6 +41,9 @@ class controller:
         self.score_text = ""
         self.last_move_is_rotate = False
         self.highlight = []
+        self.ren = 0
+        self.last_deleted = False
+        self.btb_ready = False
         
     def init(self):
         self.next_minos_init()
@@ -125,8 +130,9 @@ class controller:
         self.dropping_mino.current_pos[1] = y_position - 1
         self.land()
 
-    # update field
+    # return send, basis, btb, ren, all_deletion info
     def land(self):
+        # update field
         space = self.dropping_mino.current_space()
         mino_color = self.dropping_mino.mino_id
         for xy in space:
@@ -140,22 +146,53 @@ class controller:
 
 
         lines_deleted = len(y_list)
-        if lines_deleted > 0: # if deletion required
+        if lines_deleted == 0:
+            self.last_deleted = False
+            self.ren = 0
+            return False, 0, 0, 0, 0
+            
+        else: # deletion required
+            if self.last_deleted:
+                self.ren += 1
+            self.last_deleted = True
+
             # deletion animation
             self.view.draw_deleted_lines(y_list)
             pg.display.update()
             time.sleep(0.5)
 
+            # determine basis
             #scoring
+            basis = 0
             t_spin_check = self.t_spin_checker()
             if t_spin_check == 0:
                 self.score_not_t_spin(lines_deleted)
+                if lines_deleted == 2 or lines_deleted == 3:
+                    basis = lines_deleted - 1
+                if lines_deleted == 4:
+                    basis = 4
             elif t_spin_check == 1:
                 self.score_t_spin_mini(lines_deleted)
             elif t_spin_check == 2:
                 self.score_t_spin(lines_deleted)
+                basis = lines_deleted * 2
+            
+            btb = 0
+            if t_spin_check > 1 or lines_deleted == 4: #tetris or t-spin (/mini)
+                if self.btb_ready:
+                    btb = 1
+                self.btb_ready = True
+            else:
+                self.btb_ready = False
 
             self.delete_lines(y_list)
+            all_deleted = 0
+            # the bottom line filled with 0 means all deletion occured
+            if self.field[22] == [0 for i in range(10)]:
+                all_deleted = 4
+            
+            return True, basis, btb, self.ren, all_deleted
+
 
                 
     # 0 --> no t spin 1--> t spin mini 2 --> t spin
@@ -230,7 +267,8 @@ class controller:
 
     # update View based on Model (MVC)
     def update_view(self):
-        self.view.update_screen(self.field, self.dropping_mino, self.next_minos, self.score, self.score_text, self.hold_mino_id, self.highlight)
+        self.view.update_screen(self.field, self.dropping_mino, 
+            self.next_minos, self.score, self.score_text, self.hold_mino_id, self.highlight)
 
     # 7 out of 10 minos in next_minos should be different types
     def next_minos_init(self):
@@ -298,8 +336,9 @@ class ClientProtocol:
 
 
 class ServerProtocol:
-    def __init__(self):
+    def __init__(self, online_ctl):
         self.data_received = None
+        self.ctl = online_ctl
 
     def connection_made(self, transport):
         self.transport = transport
@@ -307,17 +346,25 @@ class ServerProtocol:
     def datagram_received(self, data, addr):
         #message = data.decode()
         #print('Received %r from %s' % (message, addr))
-        self.data_received = data
+        if data != None:
+            if data[:2] == ('XY').encode():
+                self.ctl.update_op_layout(data[2:])
+            elif data[:2] == ('FI').encode(): # fire check
+                print("receiving fire")
+                self.ctl.incoming_fire.add(data[2])
+            else:
+                print("get something")
+                print(data)
 
 class online_controller(controller):
     def __init__(self, view, ri, rs):
         super(online_controller, self).__init__(view)
         self.opponent_layout = [[0 for i in range(10)] for j in range(20)]
         self.incoming_fire = fire()
-        self.ren = 0
-        self.btb_ready = False
+        self.sending_fire = 0
         self.room_index = ri
         self.room_side = rs
+        self.event = asyncio.Event()
 
     async def send_layout(self):
         loop = asyncio.get_running_loop()
@@ -349,23 +396,58 @@ class online_controller(controller):
             new_layout[y][x] = self.dropping_mino.mino_id
         return new_layout
 
-    async def receive_layout(self, event, update_rate=0.1):
+    async def receive_layout(self, event, update_rate=0.01):
         loop = asyncio.get_running_loop()
         transport, protocol = await loop.create_datagram_endpoint(
-            lambda: ServerProtocol(),
+            lambda: ServerProtocol(self),
             local_addr=(client_ip, client_udp_port),
         )
+        await event.wait()
+        """
         while event.is_set() != True:
-            await asyncio.sleep(update_rate)
+            await asyncio.sleep(3600)
             if protocol.data_received != None:
-                if protocol.data_received[:2] == ('XY').encode():
-                    self.update_op_layout(protocol.data_received[2:])
-                else: # fire check
-                    pass
+                data = protocol.data_received
+                if data[:2] == ('XY').encode():
+                    self.update_op_layout(data[2:])
+                elif data[:2] == ('FI').encode(): # fire check
+                    print("receiving fire")
+                    self.incoming_fire.add(data[2])
+                else:
+                    print("get something")
+                    print(data)
+        """
         transport.close()
 
+    async def send_fire(self, terminator):
+        while terminator.is_set() != True:
+            # event is set by land() only when necessary
+            await self.event.wait()
+
+            print("sending fire")
+            loop = asyncio.get_running_loop()
+            on_con_lost = loop.create_future()
+            fire = self.get_fire()
+            transport, protocol = await loop.create_datagram_endpoint(
+                lambda: ClientProtocol(fire, on_con_lost),
+                remote_addr=(server_ip, server_udp_port))
+
+            try:
+                await on_con_lost
+            finally:
+                transport.close()
+                self.sending_fire = 0
+                self.event.clear()
+        
+    # used by send_fire
+    def get_fire(self):
+        suffix = ('EF').encode() + (self.room_index).to_bytes(1, "big") \
+            + (self.room_side).to_bytes(1, "big") + self.sending_fire.to_bytes(1, "big")
+        return suffix
+    
+
+
     def update_op_layout(self, bytes_layout):
-        print("update op layout")
         for i, bytes_line in enumerate(self.line_generator(bytes_layout)):
             #self.opponent_layout[i] = [int.from_bytes(b, "big") for b in bytes_line]
             length = len(bytes_line)
@@ -373,7 +455,6 @@ class online_controller(controller):
                 self.opponent_layout[i] = [b for b in bytes_line]
             elif length < 10:
                 self.opponent_layout[i] = [bytes_line[i] if i < length else 0 for i in range(10)]
-        print(self.opponent_layout)
 
     # take bytesarray and generate its contents 10 bytes per once
     def line_generator(self, bytes_field):
@@ -389,4 +470,23 @@ class online_controller(controller):
         self.view.update_screen(self.field, self.dropping_mino,
                                 self.next_minos, self.score, self.score_text,
                                  self.hold_mino_id, self.highlight, self.opponent_layout)
+    def land(self):
+        send, basis, btb, ren, all_deleted = super(online_controller, self).land()
+        if send:
+            sending_lines = basis + btb + ren_bonus[ren] + all_deleted
+            remainder = self.incoming_fire.subtract(sending_lines)
+            if remainder > 0:
+                self.sending_fire += remainder
+                self.event.set()
+
+        num_fire = self.incoming_fire.countdown()
+        
+        # fire insertion to field
+        if num_fire > 0:
+            empty_index = random.randint(0, 9)
+            added_stacks = [[8 if i != empty_index else 0 for i in range(10)] for i in range(num_fire)]
+            self.field.extend(added_stacks)
+            self.field = self.field[num_fire:]
+
+
     

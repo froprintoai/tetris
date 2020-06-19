@@ -55,3 +55,7 @@ o_srs = [[[0,0]],
 # spawn location
 i_spawn = [3, 0] #(x, y)
 jlostz_spawn = [4, 1]
+
+# ren bonux (index : num ren, elem : bonus)
+# index : 0 ~ 20
+ren_bonus = [0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]

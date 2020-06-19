@@ -132,6 +132,7 @@ func handleTCPConnection(conn *net.TCPConn) {
 			}
 			// delete room
 			rooms.Delete(roomIndex)
+		} else if bytes.Equal(magicNumber, []byte("FI")) {
 		}
 
 	} else {
