@@ -143,14 +143,21 @@ class online_view(view):
     def screen_init(self):
         super(online_view, self).screen_init()
         self.draw_op_field()
+        self.draw_fire()
     
     def draw_op_field(self):
         pg.draw.rect(self.screen, BLACK, [op_field_x, op_field_y, op_field_width, op_field_length], 5)
         pg.draw.rect(self.screen, COLOR_BG, [op_field_x, op_field_y, op_field_width, op_field_length])
+    
+    def draw_fire(self):
+        pg.draw.rect(self.screen, BLACK, [fire_x, fire_y, fire_width, fire_length], 5)
+        pg.draw.rect(self.screen, COLOR_BG, [fire_x, fire_y, fire_width, fire_length])
         
-    def update_screen(self, field, dropping_mino, next_minos, score, score_text, hold_mino_id, highlight, op_layout):
+    def update_screen(self, field, dropping_mino, next_minos, score,
+                score_text, hold_mino_id, highlight, op_layout, num_fire):
         super(online_view, self).update_screen(field, dropping_mino, next_minos, score, score_text, hold_mino_id, highlight)
         self.update_op_field(op_layout)
+        self.update_fire(num_fire)
         
     def update_op_field(self, op_layout):
         self.draw_op_field()
@@ -163,6 +170,17 @@ class online_view(view):
                     pg.draw.rect(self.screen, color, [start_x, start_y, block_size, block_size])
                     # enclose it with bg color line
                     pg.draw.rect(self.screen, COLOR_BG, [start_x, start_y, block_size, block_size], 1)
+    
+    def update_fire(self, num_fire):
+        self.draw_fire()
+        bottom_x = fire_x
+        bottom_y = fire_y + fire_length
+        d_x = bottom_x
+        d_y = bottom_y
+        for i in range(num_fire):
+            d_y -= block_size
+            pg.draw.rect(self.screen, COLOR_F, [d_x, d_y, block_size, block_size])
+            pg.draw.rect(self.screen, COLOR_BG, [d_x, d_y, block_size, block_size], 1)
 
 # return 0 if single play
 def main_menu(screen):

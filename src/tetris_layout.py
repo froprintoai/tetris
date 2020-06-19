@@ -43,6 +43,11 @@ op_field_y = field_y
 op_field_width = field_width
 op_field_length = field_length
 
+fire_x = field_x + field_width + 30 
+fire_y = field_y
+fire_width = block_size
+fire_length = field_length
+
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 

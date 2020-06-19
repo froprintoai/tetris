@@ -9,6 +9,10 @@ class fire:
         for stack in self.stacks:
             ret += 'timer: %r lines: %r\n' % (stack.timer, stack.lines)
         return ret
+    
+    def __len__(self):
+        return sum([stack.lines for stack in self.stacks])
+        
 
 
     def add(self, num):

@@ -469,7 +469,7 @@ class online_controller(controller):
     def update_view(self):
         self.view.update_screen(self.field, self.dropping_mino,
                                 self.next_minos, self.score, self.score_text,
-                                 self.hold_mino_id, self.highlight, self.opponent_layout)
+                                 self.hold_mino_id, self.highlight, self.opponent_layout, len(self.incoming_fire))
     def land(self):
         send, basis, btb, ren, all_deleted = super(online_controller, self).land()
         if send:
