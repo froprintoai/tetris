@@ -30,7 +30,8 @@ func sweeper(wg *sync.WaitGroup) {
 					} else if b0 {
 						// send "You Won" message to the opponent player
 						dest := rooms.RoomSlice[i].players[1].addrTCP
-						conn, err := net.DialTCP("tcp", laddrTCP, dest)
+						//conn, err := net.DialTCP("tcp", laddrTCP, dest)
+						conn, err := net.DialTCP("tcp", nil, dest)
 						if err != nil {
 							log.Println("Error in sweeper : failed to notify winner :", err)
 						} else {
@@ -44,7 +45,8 @@ func sweeper(wg *sync.WaitGroup) {
 					} else if b1 {
 						// send "You Won" message to the opponent player
 						dest := rooms.RoomSlice[i].players[0].addrTCP
-						conn, err := net.DialTCP("tcp", laddrTCP, dest)
+						//conn, err := net.DialTCP("tcp", laddrTCP, dest)
+						conn, err := net.DialTCP("tcp", nil, dest)
 						if err != nil {
 							log.Println("Error in sweeper : failed to notify winner :", err)
 						} else {

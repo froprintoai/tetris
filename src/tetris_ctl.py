@@ -361,16 +361,18 @@ class ServerProtocol:
             else:
                 print("get something")
                 print(data)
+    def connection_lost(self, exc):
+        pass
 
 class online_controller(controller):
-    def __init__(self, view, ri, rs):
+    def __init__(self, view, ri, rs, e):
         super(online_controller, self).__init__(view)
         self.opponent_layout = [[0 for i in range(10)] for j in range(20)]
         self.incoming_fire = fire()
         self.sending_fire = 0
         self.room_index = ri
         self.room_side = rs
-        self.event = asyncio.Event()
+        self.event = e
 
     async def send_layout(self):
         loop = asyncio.get_running_loop()
@@ -409,24 +411,13 @@ class online_controller(controller):
             local_addr=(client_ip, client_udp_port),
         )
         await event.wait()
-        """
-        while event.is_set() != True:
-            await asyncio.sleep(3600)
-            if protocol.data_received != None:
-                data = protocol.data_received
-                if data[:2] == ('XY').encode():
-                    self.update_op_layout(data[2:])
-                elif data[:2] == ('FI').encode(): # fire check
-                    print("receiving fire")
-                    self.incoming_fire.add(data[2])
-                else:
-                    print("get something")
-                    print(data)
-        """
         transport.close()
+        print("recieve_layout end")
 
-    async def send_fire(self, terminator):
+    async def send_fire(self, terminator, lock):
+        await lock.acquire()
         while terminator.is_set() != True:
+            lock.release()
             # event is set by land() only when necessary
             await self.event.wait()
 
@@ -444,6 +435,9 @@ class online_controller(controller):
                 transport.close()
                 self.sending_fire = 0
                 self.event.clear()
+                await lock.acquire()
+        lock.release()
+        print("send_fire end")
         
     # used by send_fire
     def get_fire(self):

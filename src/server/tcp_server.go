@@ -114,15 +114,18 @@ func handleTCPConnection(conn *net.TCPConn) {
 			}
 		} else if bytes.Equal(magicNumber, []byte("XX")) { // Gameover
 			// send "You Won" message to the opponent player
+			log.Println("receive gameover message from ", raddr.String())
 			roomIndex := int(buf[2])
 			roomSide := int(buf[3])
 			dest := rooms.OponentTCPAddress(roomIndex, roomSide)
 			if dest != nil {
-				conn, err := net.DialTCP("tcp", laddrTCP, dest)
+				log.Println("connecting to the other player to send you won message to ", dest.String())
+				conn, err := net.DialTCP("tcp", nil, dest)
 				if err != nil {
 					log.Println("Error in handleTCPConnection : failed to notify winner :", err)
 				} else {
 					defer conn.Close()
+					log.Println("sending you won message ... ")
 					_, err = conn.Write([]byte("VI")) // "VI"CTORY
 					if err != nil {
 						log.Println("Error in handleTCPConnection : failed to notify winner :", err)
