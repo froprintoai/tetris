@@ -122,6 +122,9 @@ async def game_start(ctl, screen, event):
 
                 continue
         
+        if ctl.check_gameover():
+            break
+
         # give up the time to other coroutines
         await asyncio.sleep(0.1)
 
@@ -162,6 +165,7 @@ async def online_play(screen):
     await asyncio.gather(
         game_start(ctl, screen, event),
         layout_sender(ctl, event),
-        udp_receive_task,
+        #udp_receive_task,
+        ctl.receive_layout(event),
         fire_send_task
     )

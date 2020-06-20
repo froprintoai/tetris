@@ -63,6 +63,12 @@ class controller:
                 return True
         return False
     
+    def check_gameover(self):
+        if sum(self.field[1]) > 0:
+            return True
+        else:
+            return False
+    
     # move dropping mino an offset specified by x, right(x>0) or left(x<0)
     def move_x(self, x): 
         x_position = self.dropping_mino.current_pos[0] + x

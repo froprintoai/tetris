@@ -19,7 +19,7 @@ def single_play(screen):
     clock = pg.time.Clock()
 
     tmr = 0
-    hard_drop_sensitive = 0
+    hard_drop_sensitive = 0 # control the sensitivity for the key corresponding to hard drop
     hold_used = False
     gameover = False
 
@@ -80,6 +80,9 @@ def single_play(screen):
                 clock.tick(10)
 
                 continue
+        
+        if ctl.check_gameover():
+            break
 
         # update view
         ctl.update_view()

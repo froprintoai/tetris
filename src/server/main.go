@@ -3,6 +3,7 @@ package main
 import (
 	"net"
 	"sync"
+	"time"
 )
 
 var rooms *Rooms
@@ -13,6 +14,8 @@ var tracker map[string]chan int
 var playerQueue chan *Player
 
 var locker *sync.Mutex
+
+var serverStart time.Time
 
 const maxRooms = 32
 
@@ -45,6 +48,8 @@ func init() {
 	tracker = make(map[string]chan int, maxRooms*2)
 	playerQueue = make(chan *Player, 64)
 	locker = &sync.Mutex{}
+
+	serverStart = time.Now()
 }
 
 func main() {

@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"log"
 	"net"
 	"os"
@@ -24,7 +23,6 @@ func TCPServer(wg *sync.WaitGroup) {
 
 	for {
 		conn, err := listener.AcceptTCP()
-		fmt.Println("herehere")
 		if err != nil {
 			log.Println("error in TCPServer : ", err)
 			continue
@@ -97,6 +95,7 @@ func handleTCPConnection(conn *net.TCPConn) {
 			pending.Waiting = false
 			pending.Lock.Unlock()
 
+			log.Println("index: ", index)
 			log.Println("side : ", side)
 
 			if index == maxRooms { // couldn't find an available room
@@ -155,7 +154,8 @@ func consume() {
 			tracker[p2.addrTCP.String()] <- 2
 		} else {
 			room := &Room{
-				players: [2]*Player{p1, p2},
+				players:    [2]*Player{p1, p2},
+				lastAccess: [2]time.Time{serverStart, serverStart},
 			}
 			index, err := rooms.Insert(room)
 			if err != nil {
@@ -166,6 +166,7 @@ func consume() {
 				tracker[p2.addrTCP.String()] <- maxRooms
 				tracker[p2.addrTCP.String()] <- 2
 			} else {
+				log.Println("insertion completed successfully")
 				tracker[p1.addrTCP.String()] <- index
 				tracker[p1.addrTCP.String()] <- 0
 				tracker[p2.addrTCP.String()] <- index

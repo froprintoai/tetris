@@ -70,7 +70,7 @@ func (rs *Rooms) Insert(r *Room) (index int, err error) {
 
 		<-rs.LockSlice[currentIndex] // unlock
 		currentIndex = currentIndex + 1
-		if currentIndex > maxRooms {
+		if currentIndex >= maxRooms {
 			counter++
 			currentIndex %= maxRooms
 		}
@@ -93,34 +93,34 @@ func (rs *Rooms) Delete(index int) {
 // atomic access
 func (rs *Rooms) OponentUDPAddress(index int, side int) (addr *net.UDPAddr) {
 	otherSide := 1 - side // 1 or 0
-	rooms.LockSlice[index] <- 1
-	if rooms.RoomSlice[index] != nil {
-		addr = rooms.RoomSlice[index].players[otherSide].addrUDP
+	rs.LockSlice[index] <- 1
+	if rs.RoomSlice[index] != nil {
+		addr = rs.RoomSlice[index].players[otherSide].addrUDP
 	} else {
 		addr = nil
 	}
-	<-rooms.LockSlice[index]
+	<-rs.LockSlice[index]
 	return addr
 }
 
 // atomic access
 func (rs *Rooms) OponentTCPAddress(index int, side int) (addr *net.TCPAddr) {
 	otherSide := 1 - side // 1 or 0
-	rooms.LockSlice[index] <- 1
-	if rooms.RoomSlice[index] != nil {
-		addr = rooms.RoomSlice[index].players[otherSide].addrTCP
+	rs.LockSlice[index] <- 1
+	if rs.RoomSlice[index] != nil {
+		addr = rs.RoomSlice[index].players[otherSide].addrTCP
 	} else {
 		addr = nil
 	}
-	<-rooms.LockSlice[index]
+	<-rs.LockSlice[index]
 	return addr
 }
 
 // atomic access
 func (rs *Rooms) UpdateAccess(index int, side int) {
-	rooms.LockSlice[index] <- 1
-	if rooms.RoomSlice[index] != nil {
-		rooms.RoomSlice[index].lastAccess[side] = time.Now()
+	rs.LockSlice[index] <- 1
+	if rs.RoomSlice[index] != nil {
+		rs.RoomSlice[index].lastAccess[side] = time.Now()
 	}
-	<-rooms.LockSlice[index]
+	<-rs.LockSlice[index]
 }

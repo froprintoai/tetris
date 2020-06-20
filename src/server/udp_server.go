@@ -43,6 +43,7 @@ func packetHandler(conn *net.UDPConn, n int, remoteAddr *net.UDPAddr, buf []byte
 			info := buf[4:n]                                     // stack info
 			var suffix []byte
 			if bytes.Equal(magicNumber, []byte("CD")) {
+				log.Println("udp stack received from ", remoteAddr.String())
 				suffix = []byte("XY") // stack
 			} else if bytes.Equal(magicNumber, []byte("EF")) {
 				log.Println("get fire")
@@ -55,7 +56,10 @@ func packetHandler(conn *net.UDPConn, n int, remoteAddr *net.UDPAddr, buf []byte
 				if err != nil {
 					log.Println("error in packetHandler : failed to write : ", err)
 				}
+			} else {
+				log.Println("dest is nil")
 			}
+
 		}
 	}
 }
