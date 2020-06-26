@@ -11,7 +11,6 @@ def single_play(screen):
     v = view(screen)
     v.screen_init()
 
-
     # initiate controller
     ctl = controller(v)
     ctl.init()
