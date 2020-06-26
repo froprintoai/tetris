@@ -75,7 +75,7 @@ title_y = title_from_top
 
 options_margin = 80 # margin between options
 # single play option layout data
-sp_size = [700, 160]
+sp_size = [800, 160]
 sp_center = [
              screen_width / 2,
              title_y + title_size[1] + options_margin + sp_size[1] / 2
@@ -85,7 +85,7 @@ sp_y = sp_center[1] - sp_size[1] / 2
 sp_color = (38, 17, 115)
 
 #online play option layout data
-op_size = [700, 160]
+op_size = [800, 160]
 op_center = [
             screen_width / 2,
             sp_y + sp_size[1] + options_margin + op_size[1] / 2
@@ -93,6 +93,16 @@ op_center = [
 op_x = op_center[0] - op_size[0] / 2
 op_y = op_center[1] - op_size[1] / 2
 op_color = (100, 0, 0)
+
+# challenge AI option layout data
+ca_size = [800, 160]
+ca_center = [
+            screen_width / 2,
+            op_y + op_size[1] + options_margin + ca_size[1] / 2
+           ]
+ca_x = ca_center[0] - ca_size[0] / 2
+ca_y = ca_center[1] - ca_size[1] / 2
+ca_color = (0, 102, 0)
 
 
 # p: pause layout while playing

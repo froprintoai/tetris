@@ -190,10 +190,13 @@ def main_menu(screen):
 
     # show single play text
     show_option(screen, sp_size, sp_color, "single play", WHITE, sp_x, sp_y, sp_center)
-    pg.display.update()
 
     # show online play text
     show_option(screen, op_size, op_color, "online play", WHITE, op_x, op_y, op_center)
+
+    # show AI play text
+    show_option(screen, ca_size, ca_color, "challenge AI", WHITE, ca_x, ca_y, ca_center)
+    
     pg.display.update()
 
     while True:
@@ -210,6 +213,10 @@ def main_menu(screen):
             if mouse_x > op_x and mouse_x < op_x + op_size[0] \
                 and mouse_y > op_y and mouse_y < op_y + op_size[1]:
                 return 1
+            if mouse_x > ca_x and mouse_x < ca_x + ca_size[0] \
+                and mouse_y > ca_y and mouse_y < ca_y + ca_size[1]:
+                print("here")
+                return 2
 
 #return True for resume, False for back to main menu
 def pause(screen):
