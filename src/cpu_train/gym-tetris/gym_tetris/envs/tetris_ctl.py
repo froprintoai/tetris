@@ -397,13 +397,13 @@ class controller:
         # insert next minos info
         for i in range(5):
             l = [0 for j in range(10)]
-            l[self.next_minos[i]] = 1
+            l[self.next_minos[i] - 1] = 1
             field_copy.insert(0, l)
         
         # insert hold mino info
         l = [0 for i in range(10)]
         if self.hold_mino_id != None:
-            l[self.hold_mino_id] = 1
+            l[self.hold_mino_id - 1] = 1
         field_copy.insert(0, l)
 
         return field_copy
