@@ -103,6 +103,24 @@ class tetrimino:
             occupied_space.append([x_position, y_position])
         return occupied_space
 
+I_mino = tetrimino(1, I_layout, i_srs, i_spawn)
+J_mino = tetrimino(2, J_layout, jlstz_srs, jlostz_spawn)
+L_mino = tetrimino(3, L_layout, jlstz_srs, jlostz_spawn)
+O_mino = tetrimino(4, O_layout, o_srs, jlostz_spawn)
+S_mino = tetrimino(5, S_layout, jlstz_srs, jlostz_spawn)
+T_mino = tetrimino(6, T_layout, jlstz_srs, jlostz_spawn)
+Z_mino = tetrimino(7, Z_layout, jlstz_srs, jlostz_spawn)
+
+minos = {
+    1: I_mino,
+    2: J_mino,
+    3: L_mino,
+    4: O_mino,
+    5: S_mino, 
+    6: T_mino,
+    7: Z_mino
+}
+
 class controller:
     I_mino = tetrimino(1, I_layout, i_srs, i_spawn)
     J_mino = tetrimino(2, J_layout, jlstz_srs, jlostz_spawn)
@@ -256,6 +274,8 @@ class controller:
             t_spin_check = self.t_spin_checker()
             if t_spin_check == 0:
                 self.score_not_t_spin(lines_deleted)
+                if lines_deleted == 1:
+                    basis = 1
                 if lines_deleted == 2 or lines_deleted == 3:
                     basis = lines_deleted - 1
                 if lines_deleted == 4:
