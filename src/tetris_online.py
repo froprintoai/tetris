@@ -61,7 +61,6 @@ async def game_start(ctl, screen, event, lock, fire_event):
     clock = pg.time.Clock()
     tmr = 0
     hard_drop_sensitive = 0
-    hold_used = False
     gameover = False
 
     await lock.acquire()
@@ -88,7 +87,6 @@ async def game_start(ctl, screen, event, lock, fire_event):
                 gameover = ctl.next_round()
                 if gameover:
                     event.set()
-                hold_used = False
                 tmr = 0
                 hard_drop_sensitive = 1
             else:
@@ -98,14 +96,7 @@ async def game_start(ctl, screen, event, lock, fire_event):
         if key[pg.K_LEFT] == 1: # rotate counterclockwise
             ctl.rotate(-1)
         if key[pg.K_SPACE] == 1: #hold
-            if hold_used == False:
-                ctl.hold()
-                hold_used = True
-        if key[pg.K_p] == 1: #pause
-            resume = pause(screen)
-            if resume != True:
-                event.set()
-            screen.fill(BLACK)
+            ctl.hold()
 
         # control soft drop
         if tmr > 7:
@@ -116,7 +107,6 @@ async def game_start(ctl, screen, event, lock, fire_event):
                 gamevoer = ctl.next_round()
                 if gameover:
                     event.set()
-                hold_used = False
 
                 ctl.update_view()
                 pg.display.update()
@@ -219,7 +209,6 @@ async def online_play(screen):
 
     fire_event = asyncio.Event()
     ctl = online_controller(v, room_index, room_side, fire_event)
-    ctl.init()
 
     # synchronized using event
     # game_start and TCPServerProtocol are the event setters

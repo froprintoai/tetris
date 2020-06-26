@@ -13,13 +13,11 @@ def single_play(screen):
 
     # initiate controller
     ctl = controller(v)
-    ctl.init()
 
     clock = pg.time.Clock()
 
     tmr = 0
     hard_drop_sensitive = 0 # control the sensitivity for the key corresponding to hard drop
-    hold_used = False
     gameover = False
 
     while True:
@@ -44,7 +42,6 @@ def single_play(screen):
                 gameover = ctl.next_round()
                 if gameover:
                     break
-                hold_used = False
                 tmr = 0
                 hard_drop_sensitive = 1
             else:
@@ -54,9 +51,7 @@ def single_play(screen):
         if key[pg.K_LEFT] == 1: # rotate counterclockwise
             ctl.rotate(-1)
         if key[pg.K_SPACE] == 1: #hold
-            if hold_used == False:
-                ctl.hold()
-                hold_used = True
+            ctl.hold()
         if key[pg.K_p] == 1: #pause
             resume = pause(screen)
             if resume != True:
@@ -72,7 +67,6 @@ def single_play(screen):
                 gamevoer = ctl.next_round()
                 if gameover:
                     break
-                hold_used = False
 
                 ctl.update_view()
                 pg.display.update()

@@ -44,8 +44,8 @@ class controller:
         self.ren = 0
         self.last_deleted = False
         self.btb_ready = False
-        
-    def init(self):
+        self.hold_used = False
+
         self.next_minos_init()
     
     def next_round(self) -> bool:
@@ -53,6 +53,7 @@ class controller:
         self.dropping_mino = controller.minos[self.next_minos[0]]
         self.next_minos_update()
         self.last_move_is_rotate = False
+        self.hold_used = False
         self.update_highlight()
         return self.is_gameover()
     
@@ -297,15 +298,20 @@ class controller:
     
     # exchange or hold
     def hold(self):
-        if self.hold_mino_id == None:
-            self.hold_mino_id = self.dropping_mino.mino_id
-            self.next_round()
+        if self.hold_used:
+            pass
         else:
-            self.dropping_mino.init_mino()
-            temp_next_mino_id = self.hold_mino_id
-            self.hold_mino_id = self.dropping_mino.mino_id
-            self.dropping_mino = controller.minos[temp_next_mino_id]
-        self.update_highlight()
+            if self.hold_mino_id == None:
+                self.hold_mino_id = self.dropping_mino.mino_id
+                self.next_round()
+            else:
+                self.last_move_is_rotate = False
+                self.dropping_mino.init_mino()
+                temp_next_mino_id = self.hold_mino_id
+                self.hold_mino_id = self.dropping_mino.mino_id
+                self.dropping_mino = controller.minos[temp_next_mino_id]
+            self.hold_used = True
+            self.update_highlight()
     
     def update_highlight(self):
         self.highlight = []
