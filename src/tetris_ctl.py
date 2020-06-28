@@ -494,5 +494,68 @@ class online_controller(controller):
             self.field.extend(added_stacks)
             self.field = self.field[num_fire:]
 
+class controller_cpu(controller):
+    def __init__(self, view, l_conn, f_conn, g_conn, lock):
+        super(controller_cpu, self).__init__(view)
+        self.opponent_layout = [[0 for i in range(10)] for j in range(20)]
+        self.incoming_fire = fire()
 
+        self.layout_lock = lock
+        self.layout_conn = l_conn
+        self.fire_conn = f_conn
+        self.gameover_conn = g_conn
+
+    def update_view(self):
+        self.view.update_screen(self.field, self.dropping_mino,
+                                self.next_minos, self.score, self.score_text,
+                                 self.hold_mino_id, self.highlight, self.opponent_layout, len(self.incoming_fire))
     
+    def land(self):
+        send, basis, btb, ren, all_deleted = super(controller_cpu, self).land()
+        if send:
+            sending_lines = basis + btb + ren_bonus[ren] + all_deleted
+            remainder = self.incoming_fire.subtract(sending_lines)
+            if remainder > 0:
+                self.fire_conn.send(remainder)
+        
+        # fire insertion to field
+        num_fire = self.incoming_fire.countdown()
+        if num_fire > 0:
+            empty_index = random.randint(0, 9)
+            added_stacks = [[8 if i != empty_index else 0 for i in range(10)] for i in range(num_fire)]
+            self.field.extend(added_stacks)
+            self.field = self.field[num_fire:]
+    
+    def recv_fire(self):
+        while self.fire_conn.poll():
+            self.incoming_fire.add(self.fire_conn.recv())
+
+    # get the first layout from the layout pipe and delete the rest
+    def recv_layout(self):
+        self.layout_lock.acquire()
+        try:
+            if self.layout_conn.poll():
+                self.opponent_layout = self.layout_conn.recv()
+                # empty the pipe
+                while self.layout_conn.poll():
+                    self.layout_conn.recv()
+        finally:
+            self.layout_lock.release()
+    
+    def recv_gameover(self):
+        if self.gameover_conn.poll():
+            self.gameover_conn.recv()
+            return True
+        else:
+            return False
+    
+
+class agent_ctl():
+    def __init__(self):
+        pass
+    
+    def step(self):
+        pass
+
+    def get_layout(self):
+        pass

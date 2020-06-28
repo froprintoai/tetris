@@ -13,6 +13,7 @@ from tetris_layout import screen_width, screen_length
 from tetris_view import main_menu
 from tetris_single import single_play
 from tetris_online import online_play
+from tetris_cpu import cpu_play
 
 """
 tetris implemented using pygame
@@ -32,7 +33,7 @@ def main():
         elif select == 1:
             asyncio.run(online_play(screen))
         elif select == 2:
-            pass
+            cpu_play(screen)
         time.sleep(1)
 
 

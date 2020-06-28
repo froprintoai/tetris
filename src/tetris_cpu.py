@@ -1,26 +1,50 @@
+from tetris_view import online_view
+from tetris_ctl import controller_cpu, agent_ctl
+
+import multiprocessing as mp
 import pygame as pg
 import sys
 
-from tetris_ctl import controller
-from tetris_view import view, pause
-from tetris_layout import BLACK
+def cpu(l_conn, f_conn, g_conn, lock):
+    agent = agent_ctl()
+    while True:
+        # based on its observation, takes action
+        agent.step()
 
-def single_play(screen):
-    
+        # send its layout
+        lock.acquire()
+        try:
+            l_conn.send(agent.get_layout())
+        finally:
+            lock.release()
+
+        # receive fire, and update observation
+        # receive gameover, if so, break       
+
+
+def cpu_play(screen):
+
+    layout_lock = mp.Lock()
+    p_layout_conn, c_layout_conn = mp.Pipe()
+    p_fire_conn, c_fire_conn = mp.Pipe()
+    p_gameover_conn, c_gameover_conn = mp.Pipe()
+
     # show basic screen
-    v = view(screen)
+    v = online_view(screen)
     v.screen_init()
+    ctl = controller_cpu(v, p_layout_conn, p_fire_conn, p_gameover_conn, layout_lock)
 
-    # initiate controller
-    ctl = controller(v)
+    p = mp.Process(target=cpu, args=(c_layout_conn, c_fire_conn, c_gameover_conn, layout_lock))
 
     clock = pg.time.Clock()
-
     tmr = 0
     hard_drop_sensitive = 0 # control the sensitivity for the key corresponding to hard drop
     gameover = False
 
     while True:
+        if ctl.recv_gameover():
+            break
+
         tmr = tmr + 1
 
         # check user input
@@ -52,11 +76,6 @@ def single_play(screen):
             ctl.rotate(-1)
         if key[pg.K_SPACE] == 1: #hold
             ctl.hold()
-        if key[pg.K_p] == 1: #pause
-            resume = pause(screen)
-            if resume != True:
-                break
-            screen.fill(BLACK)
 
         # control soft drop
         if tmr > 7:
@@ -76,6 +95,10 @@ def single_play(screen):
         
         if ctl.check_gameover():
             break
+
+        # receive fire and layout
+        ctl.recv_fire()
+        ctl.recv_layout()
 
         # update view
         ctl.update_view()
