@@ -1,15 +1,27 @@
 from tetris_view import online_view
 from tetris_ctl import controller_cpu, agent_ctl
+from cpu_model import DQN
 
 import multiprocessing as mp
 import pygame as pg
+import gym
+import torch
 import sys
+import time
 
 def cpu(l_conn, f_conn, g_conn, lock):
-    agent = agent_ctl()
+    env = gym.make("gym_tetris:tetris-v0")
+    net = DQN(env.observation_space.shape,
+                    env.action_space.n)
+    net.load_state_dict(torch.load("tetris-best_8.pit", map_location=torch.device('cpu')))
+    net.eval()
+    agent = agent_ctl(env, net, f_conn)
     while True:
         # based on its observation, takes action
-        agent.step()
+        is_done = agent.step()
+        if is_done:
+            g_conn.send(True)
+            break
 
         # send its layout
         lock.acquire()
@@ -19,7 +31,14 @@ def cpu(l_conn, f_conn, g_conn, lock):
             lock.release()
 
         # receive fire, and update observation
+        agent.recv_fire()
+
         # receive gameover, if so, break       
+        if g_conn.poll():
+            g_conn.recv()
+            break
+        time.sleep(0.2)
+
 
 
 def cpu_play(screen):
@@ -35,6 +54,7 @@ def cpu_play(screen):
     ctl = controller_cpu(v, p_layout_conn, p_fire_conn, p_gameover_conn, layout_lock)
 
     p = mp.Process(target=cpu, args=(c_layout_conn, c_fire_conn, c_gameover_conn, layout_lock))
+    p.start()
 
     clock = pg.time.Clock()
     tmr = 0
@@ -65,6 +85,7 @@ def cpu_play(screen):
                 ctl.hard_drop()
                 gameover = ctl.next_round()
                 if gameover:
+                    p_gameover_conn.send(True)
                     break
                 tmr = 0
                 hard_drop_sensitive = 1
@@ -85,6 +106,7 @@ def cpu_play(screen):
             if land == 1:
                 gamevoer = ctl.next_round()
                 if gameover:
+                    p_gameover_conn.send(True)
                     break
 
                 ctl.update_view()
@@ -94,6 +116,7 @@ def cpu_play(screen):
                 continue
         
         if ctl.check_gameover():
+            p_gameover_conn.send(True)
             break
 
         # receive fire and layout
@@ -105,3 +128,4 @@ def cpu_play(screen):
         pg.display.update()
 
         clock.tick(10)
+    p.join()

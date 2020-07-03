@@ -5,6 +5,7 @@ from tetris_data import *
 
 import pygame as pg
 import random
+import torch
 import numpy as np
 import time
 import copy
@@ -551,11 +552,50 @@ class controller_cpu(controller):
     
 
 class agent_ctl():
-    def __init__(self):
-        pass
+    def __init__(self, env, net, f_conn):
+        self.env = env
+        self.net = net
+        self.state = self.env.reset()
+        self.f_conn = f_conn
+        self.incoming_fire = fire()
+
     
     def step(self):
-        pass
+        state_a = np.array([self.state], copy=False)
+        print(state_a)
+        state_v = torch.tensor(state_a)
+        q_vals_v = self.net(state_v)
+        print(q_vals_v)
+        _, act_v = torch.max(q_vals_v, dim=1)
+        action = int(act_v.item())
+
+        print("action : " + str(action))
+        self.state, _, is_done, info_list = self.env.step(action)
+
+        landed = info_list[0]
+        sending_fire = info_list[1]
+
+
+        if landed:
+            if sending_fire > 0:
+                remainder = self.incoming_fire.subtract(sending_fire)
+                if remainder > 0:
+                    self.fire_conn.send(remainder)
+            # fire insertion to field
+            num_fire = self.incoming_fire.countdown()
+            if num_fire > 0:
+                self.env.add_fire(num_fire)
+            
+        return is_done
+
 
     def get_layout(self):
-        pass
+        temp = np.squeeze(self.state[:, 9: ,:], axis=0)
+        temp = temp.astype(int)
+        return temp.tolist()
+    
+    def recv_fire(self):
+        while self.f_conn.poll():
+            self.incoming_fire.add(self.f_conn.recv())
+
+

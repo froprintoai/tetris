@@ -225,11 +225,11 @@ class controller:
         if self.check_collision(self.dropping_mino.current_rot, [x_position, y_position]) == False: # won't collide
             self.dropping_mino.current_pos[1] += 1
             self.last_move_is_rotate = False
-            return False, 0
+            return False, 0, [], False
         else:
-            score = self.land()
+            score, x_list, perfect_landed = self.land()
             self.next_round()
-            return True, score
+            return True, score, x_list, perfect_landed
 
     def hard_drop(self):
         x_position = self.dropping_mino.current_pos[0]
@@ -238,30 +238,49 @@ class controller:
             y_position += 1
         self.dropping_mino.current_pos[1] = y_position - 1
 
-        score = self.land()
+        score, x_list, perfect_landed = self.land()
         self.next_round()
-        return True, score
+        return True, score, x_list, perfect_landed
 
-    # return basis + btb + ren + all_deletion info
+    # return basis + btb + ren + all_deletion info, column_index
     def land(self):
         # update field
         space = self.dropping_mino.current_space()
         mino_color = self.dropping_mino.mino_id
         for xy in space:
             self.field[xy[1]][xy[0]] = mino_color
+
         #line deletion 
         y_list = []
+        x_list = []
         for xy in space:
+            x_list.append(xy[0])
             y_list.append(xy[1])
         y_list = list(dict.fromkeys(y_list)) #remove duplication
+        x_list = list(dict.fromkeys(x_list))
         y_list = [y for y in y_list if np.prod(self.field[y]) != 0]
 
+        perfect_landed = True
+        touched_space = []
+        for x in x_list:
+            lowest = -1
+            for xy in space:
+                if xy[0] == x:
+                    if lowest < xy[1]:
+                        lowest = xy[1]
+            touched_space.append([x, lowest + 1])
+        for xy in touched_space:
+            if xy[1] < 23:
+                if self.field[xy[1]][xy[0]] == 0:
+                    perfect_landed = False
+
+                
 
         lines_deleted = len(y_list)
         if lines_deleted == 0:
             self.last_deleted = False
             self.ren = 0
-            return 0
+            return 0, x_list, perfect_landed
             
         else: # deletion required
             if self.last_deleted:
@@ -300,7 +319,7 @@ class controller:
             if self.field[22] == [0 for i in range(10)]:
                 all_deleted = 4
             
-            return basis + btb + self.ren + all_deleted
+            return basis + btb + self.ren + all_deleted, x_list, perfect_landed
 
 
                 
@@ -427,5 +446,48 @@ class controller:
         field_copy.insert(0, l)
 
         return field_copy
+    
+    # return the height of the field (1 ~ 23)
+    def highest(self):
+        ret = 0
+        for i, line in enumerate(self.field):
+            if sum(line) > 0:
+                ret = 23 - i
+                break
+        return ret
+    
+    def highest_at(self, idx):
+        ret = 0
+        for i, line in enumerate(self.field):
+            if line[idx] > 0:
+                ret = 23 - i
+                break
+        return ret
         
+    # return 0 ~ 10 (10 is impossible)
+    def hole_columns(self):
+        hole_count = 0
+        for i in range(10):
+            highest = self.highest_at(i)
+            for j in range(highest):
+                if self.field[22-j][i] == 0:
+                    hole_count += 1
+                    break
+        return hole_count
+    
+    def hole_columns_at(self, idx_list):
+        hole_count = 0
+        for i in idx_list:
+            highest = self.highest_at(i)
+            for j in range(highest):
+                if self.field[22-j][i] == 0:
+                    hole_count += 1
+                    break
+        return hole_count
+
+    def add_fire(self, fire):
+        empty_index = random.randint(0, 9)
+        added_stacks = [[8 if i != empty_index else 0 for i in range(10)] for i in range(fire)]
+        self.field.extend(added_stacks)
+        self.field = self.field[fire:]
 

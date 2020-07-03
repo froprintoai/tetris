@@ -179,9 +179,8 @@ while True:
         elif event.key == pg.K_SPACE:
             obs, reward, is_done, _ = env.step(6)
 
-    print(np.array(obs))
-    if reward > 0:
-        print("reward is " + str(reward))
+    #print(np.array(obs))
+    print("reward is " + str(reward))
     if is_done:
         env.reset()
 
