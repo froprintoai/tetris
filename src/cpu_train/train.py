@@ -140,7 +140,7 @@ def calc_loss(batch, net, tgt_net, device="cpu"):
     return nn.MSELoss()(state_action_values,
                         expected_state_action_values)
 
-def calc_loss_n_steps(batch, net, tgt_net, device="cpu"):
+def calc_loss_n_steps(batch, net, tgt_net, device="cpu", double=False):
     n_states, n_actions, n_rewards, n_dones, n_next_states = batch
 
     init_states = [n_states[i][0] for i in range(BATCH_SIZE)]
@@ -164,25 +164,35 @@ def calc_loss_n_steps(batch, net, tgt_net, device="cpu"):
     rewards_v = torch.tensor(np.array(expected_state_action_values, dtype=np.float32)).to(device)
 
     next_states = [n_next_states[i][-1] for i in range(BATCH_SIZE)]
-    next_states_v = torch.tensor(np.array(next_states, copy=False)).to(device)
+    next_states_v = torch.tensor(np.array(next_states, copy=False)).to(device) # [s', s', ...]
     dones = [n_dones[i][-1] for i in range(BATCH_SIZE)]
-    done_mask = torch.BoolTensor(dones).to(device)
+    done_mask = torch.BoolTensor(dones).to(device) # eg. [F, T, F, ...]
+    next_state_values = None
     with torch.no_grad():
-        next_state_values = tgt_net(next_states_v).max(1)[0]
+        if double:
+            next_state_acts = net(next_states_v).max(1)[1] # [index, index, ...]
+            next_state_values = tgt_net(next_states_v).gather(
+                        1, next_state_acts.unsqueeze(-1)).squeeze(-1)
+        else:
+            next_state_values = tgt_net(next_states_v).max(1)[0]
         next_state_values[done_mask] = 0.0
         next_state_values = next_state_values.detach()
 
     gammas = torch.tensor(gammas).to(device)
     y = next_state_values * gammas + rewards_v
-    print("Updating Q : {0:.3f} with y : {1:.3f} + {2:.3f}".format(state_action_values[0], rewards_v[0], next_state_values[0]))
+    #print("Updating Q : {0:.3f} with y : {1:.3f} + {2:.3f}".format(state_action_values[0], rewards_v[0], next_state_values[0]))
     return nn.MSELoss()(state_action_values, y)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-n", type=int, default=1)
+    parser.add_argument("--double", default=False, action="store_true")
     args = parser.parse_args()
     n_steps = args.n
+    is_double = args.double
     print(n_steps)
+    print(is_double)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(device)
@@ -262,7 +272,7 @@ if __name__ == "__main__":
         #batch = buffer.sample(BATCH_SIZE)
         batch = buffer.sample_n_steps(BATCH_SIZE, n_steps)
         #loss_t = calc_loss(batch, net, tgt_net, device=device)
-        loss_t = calc_loss_n_steps(batch, net, tgt_net, device=device)
+        loss_t = calc_loss_n_steps(batch, net, tgt_net, device=device, double=is_double)
         loss_t.backward()
         optimizer.step()
     writer.close()
