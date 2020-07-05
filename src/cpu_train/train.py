@@ -8,10 +8,11 @@ import time
 import gym
 import collections
 import numpy as np
+import argparse
 
 from tensorboardX import SummaryWriter
 
-MEAN_REWARD_BOUND = 1
+MEAN_REWARD_BOUND = 20
 
 GAMMA = 0.99
 BATCH_SIZE = 32
@@ -20,8 +21,8 @@ LEARNING_RATE = 1e-4
 SYNC_TARGET_FRAMES = 1000
 REPLAY_START_SIZE = 10000
 
-EPSILON_DECAY_LAST_FRAME = 900000
-EPSILON_START = 1.0
+EPSILON_DECAY_LAST_FRAME = 1000000
+EPSILON_START = 0.8
 EPSILON_FINAL = 0.01
 
 Experience = collections.namedtuple(
@@ -47,6 +48,37 @@ class ExperienceBuffer:
                 np.array(rewards, dtype=np.float32), \
                 np.array(dones, dtype=np.uint8), \
                 np.array(next_states)
+    
+    def sample_n_steps(self, batch_size, n_steps):
+        indices = np.random.choice(len(self.buffer) - n_steps + 1, batch_size,
+                replace=False)
+        n_states = []
+        n_actions = []
+        n_rewards = []
+        n_dones = []
+        n_next_states = []
+        for idx in indices:
+            states = []
+            actions = []
+            rewards = []
+            dones = []
+            next_states = []
+            for i in range(n_steps):
+                states.append(self.buffer[idx + i].state)
+                actions.append(self.buffer[idx + i].action) 
+                rewards.append(self.buffer[idx + i].reward) 
+                dones.append(self.buffer[idx + i].done) 
+                next_states.append(self.buffer[idx + i].new_state) 
+                if self.buffer[idx + i].done:
+                    break
+            n_states.append(states)
+            n_actions.append(actions)
+            n_rewards.append(rewards)
+            n_dones.append(dones)
+            n_next_states.append(next_states)
+        return n_states, n_actions, \
+                n_rewards, n_dones, n_next_states
+
 
 class Agent:
     def __init__(self, env, exp_buffer):
@@ -82,6 +114,8 @@ class Agent:
             done_reward = self.total_reward
             self._reset()
         return done_reward
+    
+
 
 def calc_loss(batch, net, tgt_net, device="cpu"):
     states, actions, rewards, dones, next_states = batch
@@ -106,7 +140,50 @@ def calc_loss(batch, net, tgt_net, device="cpu"):
     return nn.MSELoss()(state_action_values,
                         expected_state_action_values)
 
+def calc_loss_n_steps(batch, net, tgt_net, device="cpu"):
+    n_states, n_actions, n_rewards, n_dones, n_next_states = batch
+
+    init_states = [n_states[i][0] for i in range(BATCH_SIZE)]
+    states_v = torch.tensor(np.array(
+        init_states, copy=False)).to(device)
+    init_actions = [n_actions[i][0] for i in range(BATCH_SIZE)]
+    actions_v = torch.tensor(np.array(init_actions)).to(device)
+
+    # [Q, Q, ... ,Q]
+    state_action_values = net(states_v).gather(
+        1, actions_v.unsqueeze(-1)).squeeze(-1)
+    # [y, y, ... ,y]
+    expected_state_action_values = []
+    gammas = []
+    for i in range(BATCH_SIZE):
+        y = 0.0
+        for j in range(len(n_dones[i])):
+            y += n_rewards[i][j] * (GAMMA ** j)
+        expected_state_action_values.append(y)
+        gammas.append(GAMMA ** len(n_dones[i]))
+    rewards_v = torch.tensor(np.array(expected_state_action_values, dtype=np.float32)).to(device)
+
+    next_states = [n_next_states[i][-1] for i in range(BATCH_SIZE)]
+    next_states_v = torch.tensor(np.array(next_states, copy=False)).to(device)
+    dones = [n_dones[i][-1] for i in range(BATCH_SIZE)]
+    done_mask = torch.BoolTensor(dones).to(device)
+    with torch.no_grad():
+        next_state_values = tgt_net(next_states_v).max(1)[0]
+        next_state_values[done_mask] = 0.0
+        next_state_values = next_state_values.detach()
+
+    gammas = torch.tensor(gammas).to(device)
+    y = next_state_values * gammas + rewards_v
+    print("Updating Q : {0:.3f} with y : {1:.3f} + {2:.3f}".format(state_action_values[0], rewards_v[0], next_state_values[0]))
+    return nn.MSELoss()(state_action_values, y)
+
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-n", type=int, default=1)
+    args = parser.parse_args()
+    n_steps = args.n
+    print(n_steps)
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(device)
 
@@ -114,9 +191,16 @@ if __name__ == "__main__":
 
     net = DQN(env.observation_space.shape,
                     env.action_space.n).to(device)
+    """
+    net.load_state_dict(torch.load("tetris-9000_6.pit"))
+    net.eval()
+    """
     tgt_net = DQN(env.observation_space.shape,
                     env.action_space.n).to(device)
-    
+    """
+    tgt_net.load_state_dict(torch.load("tetris-9000_6.pit"))
+    tgt_net.eval()
+    """
     writer = SummaryWriter(comment="-tetris")
 
     buffer = ExperienceBuffer(REPLAY_SIZE)
@@ -153,14 +237,15 @@ if __name__ == "__main__":
             writer.add_scalar("reward_100", m_reward, frame_idx)
             writer.add_scalar("reward", reward, frame_idx)
             if best_m_reward is None or best_m_reward < m_reward:
-                """
                 torch.save(net.state_dict(), 
                            "tetris-best_%.0f.pit" % m_reward)
-                """
                 if best_m_reward is not None:
                     print("Best reward updated %.3f -> %.3f" % (
                         best_m_reward, m_reward))
                 best_m_reward = m_reward
+            if len(total_rewards) % 1000 == 0:
+                torch.save(net.state_dict(), 
+                           "tetris-%d.pit" % len(total_rewards))
             if m_reward > MEAN_REWARD_BOUND:
                 torch.save(net.state_dict(), 
                            "tetris-best_%.0f.pit" % m_reward)
@@ -174,8 +259,10 @@ if __name__ == "__main__":
             tgt_net.load_state_dict(net.state_dict())
 
         optimizer.zero_grad()
-        batch = buffer.sample(BATCH_SIZE)
-        loss_t = calc_loss(batch, net, tgt_net, device=device)
+        #batch = buffer.sample(BATCH_SIZE)
+        batch = buffer.sample_n_steps(BATCH_SIZE, n_steps)
+        #loss_t = calc_loss(batch, net, tgt_net, device=device)
+        loss_t = calc_loss_n_steps(batch, net, tgt_net, device=device)
         loss_t.backward()
         optimizer.step()
     writer.close()
