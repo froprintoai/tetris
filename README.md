@@ -8,6 +8,8 @@ Single Play
 ![Image of Demo Play](https://github.com/froprintoai/tetris/blob/master/demo.png?raw=true)
 Online Play
 ![Image of Demo Play](https://github.com/froprintoai/tetris/blob/master/online.png?raw=true)
+Play with AI
+![Image of Demo Play](https://github.com/froprintoai/tetris/blob/master/with_cpu.png?raw=true)
  
 # Features
 This version of tetris basically follows the rule from Tetris DS.
