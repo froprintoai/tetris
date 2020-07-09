@@ -1,6 +1,7 @@
 from tetris_view import online_view
 from tetris_ctl import controller_cpu, agent_ctl
-from cpu_model import DQN
+from tetris_agent import agent
+from model import v_net
 
 import multiprocessing as mp
 import pygame as pg
@@ -11,14 +12,14 @@ import time
 
 def cpu(l_conn, f_conn, g_conn, lock):
     env = gym.make("gym_tetris:tetris-v0")
-    net = DQN(env.observation_space.shape,
+    net = v_net(env.observation_space.shape,
                     env.action_space.n)
-    net.load_state_dict(torch.load("tetris-best_8.pit", map_location=torch.device('cpu')))
-    net.eval()
-    agent = agent_ctl(env, net, f_conn)
+    # net.load_state_dict(torch.load("tetris-best_3.pit", map_location=torch.device('cpu')))
+    # net.eval()
+    a = agent(env, net, f_conn)
     while True:
         # based on its observation, takes action
-        is_done = agent.step()
+        is_done = a.step()
         if is_done:
             g_conn.send(True)
             break
@@ -26,22 +27,23 @@ def cpu(l_conn, f_conn, g_conn, lock):
         # send its layout
         lock.acquire()
         try:
-            l_conn.send(agent.get_layout())
+            layout = a.get_layout()
+            l_conn.send(layout)
         finally:
             lock.release()
 
         # receive fire, and update observation
-        agent.recv_fire()
+        a.recv_fire()
 
         # receive gameover, if so, break       
         if g_conn.poll():
             g_conn.recv()
             break
-        time.sleep(0.2)
+        time.sleep(0.5)
 
 
 
-def cpu_play(screen):
+def challenge_ai(screen):
 
     layout_lock = mp.Lock()
     p_layout_conn, c_layout_conn = mp.Pipe()

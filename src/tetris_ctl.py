@@ -536,7 +536,8 @@ class controller_cpu(controller):
         self.layout_lock.acquire()
         try:
             if self.layout_conn.poll():
-                self.opponent_layout = self.layout_conn.recv()
+                raw_layout = self.layout_conn.recv()
+                self.opponent_layout = raw_layout[3:]
                 # empty the pipe
                 while self.layout_conn.poll():
                     self.layout_conn.recv()
@@ -580,7 +581,7 @@ class agent_ctl():
             if sending_fire > 0:
                 remainder = self.incoming_fire.subtract(sending_fire)
                 if remainder > 0:
-                    self.fire_conn.send(remainder)
+                    self.f_conn.send(remainder)
             # fire insertion to field
             num_fire = self.incoming_fire.countdown()
             if num_fire > 0:
