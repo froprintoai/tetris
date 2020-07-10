@@ -1,25 +1,40 @@
 # tetris by pygame
 tetris implemented using pygame
+There are three modes to play, single play, online play and cpu play.
+Note that server should be deployed at some place if you want to play online mode.
 
 # DEMO
 Menu Screen
-![Image of Demo Play](https://github.com/froprintoai/tetris/blob/master/menu.png?raw=true)
+![Image of Demo Play](https://github.com/froprintoai/tetris/img/blob/master/menu.png?raw=true)
 Single Play
-![Image of Demo Play](https://github.com/froprintoai/tetris/blob/master/demo.png?raw=true)
+![Image of Demo Play](https://github.com/froprintoai/tetris/img/blob/master/demo.png?raw=true)
 Online Play
-![Image of Demo Play](https://github.com/froprintoai/tetris/blob/master/online.png?raw=true)
+![Image of Demo Play](https://github.com/froprintoai/tetris/img/blob/master/online.png?raw=true)
 Play with AI
-![Image of Demo Play](https://github.com/froprintoai/tetris/blob/master/with_cpu.png?raw=true)
+![Image of Demo Play](https://github.com/froprintoai/tetris/img/blob/master/with_cpu.png?raw=true)
  
 # Features
 This version of tetris basically follows the rule from Tetris DS.
 Super Rotation System is used to determine how each rotation affects the current mino's position. 
 
 # How to play
+```
 python tetris.py
+```
+
+To play online mode, you should edit network configuration in src/server/main.go, src/network_config.py, and deploy the execution file created by following command.
+```
+go build
+```
 
 To play the mode of challenge AI, make sure there is a pit file in the same directory as tetris.py.
-The default pit file, tetris-best_475.pit, is the model trained by tetris_gym_env/train.py, which you can find on my repository list. 
+The default pit file, tetris-best_475.pit, is the model trained by [here](https://github.com/froprintoai/tetris_gym_env). 
+
+# Requisite
+pygame
+numpy
+torch
+gym
  
 # Key Mapping
 
