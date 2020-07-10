@@ -72,27 +72,10 @@ class agent:
                 action_seq.append(5)
 
                 obs, reward, pos = self.step_venv(action_seq)
-                #obs = np.expand_dims(obs, axis=0)
+                obs = np.expand_dims(obs, axis=0)
                 net_inputs.append(obs)
                 results.append([action_seq, reward])
 
-                """
-                # if the mino is T mino
-                if mino_idx == 5:
-                    pos[1] += 1
-                    open_positions = self.search_t_space(pos, rot)
-                    action_seqs = [] 
-
-                    for open_pos in open_positions:
-                        action_seq = self.action_path(open_pos)
-                        if action_seq is not None:
-                            action_seqs.append(action_seq)
-                    
-                    for a_seq in action_seqs:
-                        obs, reward, _ = self.step_venv(a_seq)
-                        net_inputs.append(obs)
-                        results.append([a_seq, reward])
-                """
         # hold version
         if self.env.controller.hold_mino_id is not None:
             mino_idx = self.env.controller.hold_mino_id - 1
@@ -117,11 +100,11 @@ class agent:
                 action_seq.append(5)
 
                 obs, reward, pos = self.step_venv(action_seq)
-                #obs = np.expand_dims(obs, axis=0)
+                obs = np.expand_dims(obs, axis=0)
                 net_inputs.append(obs)
                 results.append([action_seq, reward])
         # calculate value and add to results
-        net_inputs_v = torch.tensor(net_inputs, dtype=torch.float16)
+        net_inputs_v = torch.tensor(net_inputs, dtype=torch.float32)
         values_v = self.v_net(net_inputs_v)
 
         for i, value in enumerate(values_v):

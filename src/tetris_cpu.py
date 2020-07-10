@@ -12,10 +12,9 @@ import time
 
 def cpu(l_conn, f_conn, g_conn, lock):
     env = gym.make("gym_tetris:tetris-v0")
-    net = v_net(env.observation_space.shape,
-                    env.action_space.n)
-    # net.load_state_dict(torch.load("tetris-best_3.pit", map_location=torch.device('cpu')))
-    # net.eval()
+    net = v_net(env.observation_space.shape)
+    net.load_state_dict(torch.load("tetris-best_475.pit", map_location=torch.device('cpu')))
+    net.eval()
     a = agent(env, net, f_conn)
     while True:
         # based on its observation, takes action
