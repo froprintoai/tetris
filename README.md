@@ -14,7 +14,12 @@ Play with AI
 # Features
 This version of tetris basically follows the rule from Tetris DS.
 Super Rotation System is used to determine how each rotation affects the current mino's position. 
- 
+
+# How to play
+python tetris.py
+
+To play the mode of challenge AI, make sure there is a pit file in the same directory as tetris.py.
+The default pit file, tetris-best_475.pit, is the model trained by tetris-gym/train.py. 
  
 # Key Mapping
 
