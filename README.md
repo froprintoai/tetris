@@ -5,13 +5,13 @@ Note that server should be deployed at some place if you want to play online mod
 
 # DEMO
 Menu Screen
-![Image of Demo Play](https://github.com/froprintoai/tetris/img/blob/master/menu.png?raw=true)
+![Image of Demo Play](https://github.com/froprintoai/tetris/blob/master/img/menu.png?raw=true)
 Single Play
-![Image of Demo Play](https://github.com/froprintoai/tetris/img/blob/master/demo.png?raw=true)
+![Image of Demo Play](https://github.com/froprintoai/tetris/blob/master/img/demo.png?raw=true)
 Online Play
-![Image of Demo Play](https://github.com/froprintoai/tetris/img/blob/master/online.png?raw=true)
+![Image of Demo Play](https://github.com/froprintoai/tetris/blob/master/img/online.png?raw=true)
 Play with AI
-![Image of Demo Play](https://github.com/froprintoai/tetris/img/blob/master/with_cpu.png?raw=true)
+![Image of Demo Play](https://github.com/froprintoai/tetris/blob/master/img/with_cpu.png?raw=true)
  
 # Features
 This version of tetris basically follows the rule from Tetris DS.
