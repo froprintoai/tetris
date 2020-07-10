@@ -19,7 +19,7 @@ Super Rotation System is used to determine how each rotation affects the current
 python tetris.py
 
 To play the mode of challenge AI, make sure there is a pit file in the same directory as tetris.py.
-The default pit file, tetris-best_475.pit, is the model trained by tetris-gym/train.py. 
+The default pit file, tetris-best_475.pit, is the model trained by tetris_gym_env/train.py, which you can find on my repository list. 
  
 # Key Mapping
 
