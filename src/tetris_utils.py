@@ -1,6 +1,8 @@
 from recordclass import recordclass
 Stack = recordclass('Stack', 'timer lines')
 
+# class fire is a data structure representing how many lines will be added to the current field at how many steps from the current step
+# steps count once when a mino lands
 class fire:
     def __init__(self):
         self.stacks = []
@@ -12,8 +14,6 @@ class fire:
     
     def __len__(self):
         return sum([stack.lines for stack in self.stacks])
-        
-
 
     def add(self, num):
         self.stacks.append(Stack(timer=5, lines=num))

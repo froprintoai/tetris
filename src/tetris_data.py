@@ -62,6 +62,8 @@ mino_left = [[0, 2, 0, 1],
              [0, 1, 0, 0],
              [0, 1, 0, 0]]
 
+# rot_needed[idx] is the number of rotation required to have the layout different from each other
+# for example, rot_needed[3] is 1, which means it needs to rotate once to get the layout of O-mino
 rot_needed = [2, 4, 4, 1, 3, 4, 3]
 
 # each mino's SRS information. For details, check https://tetris.wiki/Super_Rotation_System

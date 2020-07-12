@@ -42,7 +42,7 @@ class agent:
         if num_fire > 0:
             self.env.add_fire(num_fire)
 
-        # line 20を超えたらゲームオーバー？
+        # if it reaches 20 lines, it should send gameover
         height = self.env.controller.highest()
         return height > 20
 
@@ -112,7 +112,7 @@ class agent:
         
         return results
                 
-    # simulates actions on virtual environment and returns observatio, reward and pos afterward
+    # simulates actions on virtual environment and returns observation, reward and pos afterward
     def step_venv(self, action_seq):
         venv = copy.deepcopy(self.env)
 
@@ -124,34 +124,6 @@ class agent:
             total_reward += reward
         
         return obs, total_reward, info[2]
-    
-    # search space where T mino with the angle=rot fits in the range from pos to floor
-    # also, the space under it must be floor or some block so the mino would land on it 
-    def search_t_space(self, pos, rot):
-        open_pos = []
-        field = self.env.controller.field
-        while pos[1] < 22:
-            if (self.collide_T(pos, rot) == False) and (self.collide_T([pos[0], pos[1] + 1]) == True):
-                open_pos.append([pos[0], pos[1]])
-            pos[1] += 1
-        
-        return open_pos
-
-    # return True if it collides the field stack or floor when the T mino placed at pos with rotation=rot
-    # note that this doesn't check wall collision because it's assumed not to collide both walls
-    def collide_T(self, pos, rot):
-        field = self.env.controller.field
-        occupied_space = [[pos[0] + mino_layout[0], pos[1] + mino_layout[1]] for mino_layout in T_layout[rot]]
-
-        # if any occupied block is under the floor, break
-        if any(xy[1] > 22 for xy in occupied_space):
-            return True
-
-        for x, y in occupied_space:
-            if field[y][x] > 0:
-                return True
-        
-        return False
 
     def get_layout(self):
         field_copy = copy.deepcopy(self.env.controller.field)

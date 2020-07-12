@@ -24,8 +24,6 @@ def main():
             challenge_ai(screen)
         time.sleep(1)
 
-
-
 if __name__ == '__main__':
     main()
 

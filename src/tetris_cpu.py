@@ -13,13 +13,15 @@ import time
 def cpu(l_conn, f_conn, g_conn, lock):
     env = gym.make("gym_tetris:tetris-v0")
     net = v_net(env.observation_space.shape)
+    # loading the best model from current directory
     net.load_state_dict(torch.load("tetris-best_475.pit", map_location=torch.device('cpu')))
     net.eval()
     a = agent(env, net, f_conn)
     while True:
         # based on its observation, takes action
         is_done = a.step()
-        if is_done:
+
+        if is_done: # if it's done by reaching 20 height, send gameover signal to the main process
             g_conn.send(True)
             break
 
@@ -34,16 +36,15 @@ def cpu(l_conn, f_conn, g_conn, lock):
         # receive fire, and update observation
         a.recv_fire()
 
-        # receive gameover, if so, break       
+        # check if it receives gameover, if so, break       
         if g_conn.poll():
             g_conn.recv()
             break
-        time.sleep(0.5)
+        time.sleep(1)
 
 
 
 def challenge_ai(screen):
-
     layout_lock = mp.Lock()
     p_layout_conn, c_layout_conn = mp.Pipe()
     p_fire_conn, c_fire_conn = mp.Pipe()
@@ -54,6 +55,7 @@ def challenge_ai(screen):
     v.screen_init()
     ctl = controller_cpu(v, p_layout_conn, p_fire_conn, p_gameover_conn, layout_lock)
 
+    # creating another process for AI
     p = mp.Process(target=cpu, args=(c_layout_conn, c_fire_conn, c_gameover_conn, layout_lock))
     p.start()
 
